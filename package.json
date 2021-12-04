@@ -2,8 +2,11 @@
   "devDependencies": {
     "@commitlint/cli": "^13.2.1",
     "@commitlint/config-conventional": "^13.2.0",
+    "@semantic-release/exec": "^6.0.2",
     "husky": "^7.0.2",
-    "pinst": "^2.1.6"
+    "lcov-summary": "^1.0.1",
+    "pinst": "^2.1.6",
+    "semantic-release": "^18.0.1"
   },
   "lint-staged": {
     "*.{rs}": "cargo clippy"

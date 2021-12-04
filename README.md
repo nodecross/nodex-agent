@@ -7,21 +7,20 @@
 </h1>
 
 <p align="center">
-  <span>
-    <a href="https://crates.io/crates/unid">
-      <img src="https://img.shields.io/crates/v/unid.svg" alt="unid" />
-    </a>
-    <a href="https://coveralls.io/github/getunid/unid">
-      <img src="https://coveralls.io/repos/github/getunid/unid/badge.svg" alt="Coverage Status" />
-    </a>
-    <a href="https://github.com/semantic-release/semantic-release">
-      <img src="https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg" alt="Sematic-Release" />
-    </a>
-  </span>
+  <a href="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml" target="_blank">
+    <img src="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml/badge.svg?branch=main" alt="Unit Test" />
+  </a>
+  <a href="https://coveralls.io/github/getunid/unid" target="_blank">
+    <img src="https://coveralls.io/repos/github/getunid/unid/badge.svg" alt="Coverage Status" />
+  </a>
+  <a href="https://crates.io/crates/unid" target="_blank">
+    <img src="https://img.shields.io/crates/v/unid.svg" alt="unid" />
+  </a>
+  <a href="https://github.com/semantic-release/semantic-release" target="_blank">
+    <img src="https://img.shields.io/badge/semantic--release-rust-B7410E?logo=semantic-release" alt="Sematic-Release" />
+  </a>
   <br />
-  <span>
-    Automate device security provisioning with edge intelligence
-  </span>
+  Automate device security provisioning with edge intelligence
 </p>
 
 
