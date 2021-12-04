@@ -1,4 +1,4 @@
-name: setup
+name: shared
 runs:
   using: composite
   steps:
@@ -14,3 +14,6 @@ runs:
     - name: (install) rust-src
       shell: bash
       run: rustup component add rust-src
+    - name: (install) clippy
+      shell: bash
+      run: rustup component add clippy
