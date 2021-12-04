@@ -7,8 +7,8 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/getunid/unid/actions/workflows/rust.yml">
-    <img src="https://github.com/getunid/unid/actions/workflows/rust.yml/badge.svg?branch=main" alt="Unit Test" />
+  <a href="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml">
+    <img src="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml/badge.svg?branch=main" alt="Unit Test" />
   </a>
   <a href="https://coveralls.io/github/getunid/unid">
     <img src="https://coveralls.io/repos/github/getunid/unid/badge.svg" alt="Coverage Status" />
