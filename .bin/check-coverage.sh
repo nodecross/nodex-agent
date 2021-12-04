@@ -47,7 +47,7 @@ THRESHOLD="${1}"
 LCOV_PATH="${2}"
 
 [[ -f "${LCOV_PATH}" ]] || {
-    EXIT_FAILURE "[ERROR]: '${LCOV_PATH}' file not found and/or not a file"
+    EXIT_FAILURE "(ERROR): '${LCOV_PATH}' file not found and/or not a file"
 }
 
 IS_NUM="$(
@@ -56,19 +56,19 @@ IS_NUM="$(
 )"
 
 [[ "X${IS_NUM}" == "XOK" ]] || {
-    EXIT_FAILURE "[ERROR]: '${THRESHOLD}' is not a number."
+    EXIT_FAILURE "(ERROR): '${THRESHOLD}' is not a number."
 }
 
 [[ ${THRESHOLD} -lt ${_0} ]] && {
-    EXIT_FAILURE "[ERROR]: Must be set to a number greater than or equal to ${_0}."
+    EXIT_FAILURE "(ERROR): Must be set to a number greater than or equal to ${_0}."
 }
 [[ ${THRESHOLD} -gt ${_100} ]] && {
-    EXIT_FAILURE "[ERROR]: Must be set to a number less than or equal to ${_100}."
+    EXIT_FAILURE "(ERROR): Must be set to a number less than or equal to ${_100}."
 }
 
 ## INSTALL CHECK FOR `lcov-summary`
 ${NPM} exec which "lcov-summary" > /dev/null || {
-    EXIT_FAILURE "[ERROR]: 'lcov-summary' command not found."
+    EXIT_FAILURE "(ERROR): 'lcov-summary' command not found."
 }
 
 ## CHECK FOR COVERAGE
@@ -78,7 +78,7 @@ COVERAGE="$(
 )"
 
 [[ "X${COVERAGE}" == "X" ]] && {
-    EXIT_FAILURE "[ERROR]: Could not derived coverage rate."
+    EXIT_FAILURE "(ERROR): Could not derived coverage rate."
 }
 
 IS_PASSED="$(
@@ -88,7 +88,7 @@ IS_PASSED="$(
 )"
 
 [[ "X${IS_PASSED}" != "XOK" ]] && {
-    EXIT_FAILURE "[ERROR]: Test result has not reached threshold."
+    EXIT_FAILURE "(ERROR): Test result has not reached threshold."
 }
 
 EXIT_SUCCESS "[^_^] SUCCESS !"
