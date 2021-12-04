@@ -524,4 +524,9 @@ mod tests {
     fn it_works() {
         assert_eq!("hello", "hello");
     }
+
+    #[test]
+    fn always_failed() {
+        assert_eq!("hello", "world");
+    }
 }
