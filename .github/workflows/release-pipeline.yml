@@ -12,8 +12,18 @@ env:
   CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: (checkout) source code
+      uses: actions/checkout@v2
+    - name: (check) conventional commits
+      uses: webiny/action-conventional-commits@v1.0.3
+
   build:
     runs-on: ubuntu-latest
+    needs: [ prepare ]
 
     steps:
     - name: (checkout) source code
@@ -27,6 +37,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    needs: [ prepare ]
 
     steps:
     - name: (checkout) source code
@@ -83,6 +94,7 @@ jobs:
       uses: mattnotmitt/doxygen-action@v1
 
   release:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: [ docs ]
 
