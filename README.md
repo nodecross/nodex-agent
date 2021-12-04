@@ -7,16 +7,16 @@
 </h1>
 
 <p align="center">
-  <a href="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml">
+  <a href="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml" target="_blank">
     <img src="https://github.com/getunid/unid/actions/workflows/release-pipeline.yml/badge.svg?branch=main" alt="Unit Test" />
   </a>
-  <a href="https://coveralls.io/github/getunid/unid">
+  <a href="https://coveralls.io/github/getunid/unid" target="_blank">
     <img src="https://coveralls.io/repos/github/getunid/unid/badge.svg" alt="Coverage Status" />
   </a>
-  <a href="https://crates.io/crates/unid">
+  <a href="https://crates.io/crates/unid" target="_blank">
     <img src="https://img.shields.io/crates/v/unid.svg" alt="unid" />
   </a>
-  <a href="https://github.com/semantic-release/semantic-release">
+  <a href="https://github.com/semantic-release/semantic-release" target="_blank">
     <img src="https://img.shields.io/badge/semantic--release-rust-B7410E?logo=semantic-release" alt="Sematic-Release" />
   </a>
   <br />
