@@ -56,15 +56,15 @@ jobs:
       run: grcov . --source-dir . --binary-path target/debug --output-type lcov --branch --ignore-not-existing --ignore "/*" --output-path coverage/target.lcov
       env:
         LLVM_PROFILE_FILE: coverage/target-%p-%m.profraw
-    - name: (check) coverage rate
-      # [!] check for coverage rate: greather than 85%
-      shell: bash
-      run: .bin/check-coverage.sh 85 coverage/target.lcov
     - name: (run) upload to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
         github-token: ${{ secrets.github_token }}
         path-to-lcov: coverage/target.lcov
+    - name: (check) coverage rate
+      # [!] check for coverage rate: greather than 85%
+      shell: bash
+      run: .bin/check-coverage.sh 85 coverage/target.lcov
 
   docs:
     runs-on: ubuntu-latest
