@@ -1,4 +1,9 @@
 name: test
+inputs:
+  github-token:
+    required: true
+  cargo-registry-token:
+    required: true
 runs:
   using: composite
   steps:
@@ -32,7 +37,7 @@ runs:
     - name: (run) upload to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+        github-token: ${{ inputs.github-token }}
         path-to-lcov: coverage/target.lcov
     - name: (check) coverage rate
       # [!] check for coverage rate: greather than 85%

@@ -1,4 +1,9 @@
 name: prepare
+inputs:
+  github-token:
+    required: true
+  cargo-registry-token:
+    required: true
 runs:
   using: composite
   steps:
