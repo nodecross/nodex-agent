@@ -2,7 +2,6 @@ name: default-pipeline
 
 on:
   push:
-    branches: '**'
     branches-ignore: [ main ]
   pull_request:
     branches: [ main ]
