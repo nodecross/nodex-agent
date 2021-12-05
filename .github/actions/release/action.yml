@@ -1,0 +1,28 @@
+name: release
+inputs:
+  github-token:
+    required: true
+  cargo-registry-token:
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: (checkout) source code
+      uses: actions/checkout@v2
+    - name: (setup) environment
+      uses: ./.github/actions/shared
+
+    - name: (install) yarn
+      shell: bash
+      run: yarn
+
+    - name: (install) rustc-dev
+      shell: bash
+      run: rustup component add rustc-dev
+    - name: (install) semantic-release-rust
+      shell: bash
+      run: cargo install semantic-release-rust --version 1.0.0-alpha.8
+
+    - name: (run) release
+      shell: bash
+      run: yarn run semantic-release
