@@ -1,12 +1,4 @@
 name: test
-inputs:
-  GITHUB_TOKEN:
-    required: true
-  CARGO_REGISTRY_TOKEN:
-    required: true
-env:
-  GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-  CARGO_REGISTRY_TOKEN: ${{ inputs.CARGO_REGISTRY_TOKEN }}
 runs:
   using: composite
   steps:
@@ -40,7 +32,7 @@ runs:
     - name: (run) upload to coveralls
       uses: coverallsapp/github-action@1.1.3
       with:
-        github-token: ${{ env.GITHUB_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: coverage/target.lcov
     - name: (check) coverage rate
       # [!] check for coverage rate: greather than 85%
