@@ -2,8 +2,6 @@ name: release-pipeline
 
 on:
   push:
-    branches: '**'
-  pull_request:
     branches: [ main ]
 
 env:
@@ -18,8 +16,11 @@ jobs:
     steps:
     - name: (checkout) source code
       uses: actions/checkout@v2
-    - name: (check) conventional commits
-      uses: webiny/action-conventional-commits@v1.0.3
+    - name: (run) prepare
+      uses: ./.github/actions/prepare
+      with:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        CARGO_REGISTRY_TOKEN: ${{ env.CARGO_REGISTRY_TOKEN }}
 
   build:
     runs-on: ubuntu-latest
@@ -28,12 +29,11 @@ jobs:
     steps:
     - name: (checkout) source code
       uses: actions/checkout@v2
-    - name: (setup) environment
-      uses: ./.github/actions/setup
-
     - name: (run) build
-      shell: bash
-      run: make build
+      uses: ./.github/actions/build
+      with:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        CARGO_REGISTRY_TOKEN: ${{ env.CARGO_REGISTRY_TOKEN }}
 
   test:
     runs-on: ubuntu-latest
@@ -42,40 +42,11 @@ jobs:
     steps:
     - name: (checkout) source code
       uses: actions/checkout@v2
-    - name: (setup) environment
-      uses: ./.github/actions/setup
-
-    - name: (install) yarn
-      shell: bash
-      run: yarn
-
-    - name: (install) llvm-tools-preview
-      shell: bash
-      run: rustup component add llvm-tools-preview
-    - name: (install) grcov
-      shell: bash
-      run: cargo install grcov
-
-    - name: (run) tests
-      shell: bash
-      run: make test
-      env:
-        RUSTFLAGS: -Zinstrument-coverage
-        LLVM_PROFILE_FILE: coverage/target-%p-%m.profraw
-    - name: (run) coverage
-      shell: bash
-      run: grcov . --source-dir . --binary-path target/debug --output-type lcov --branch --ignore-not-existing --ignore "/*" --output-path coverage/target.lcov
-      env:
-        LLVM_PROFILE_FILE: coverage/target-%p-%m.profraw
-    - name: (run) upload to coveralls
-      uses: coverallsapp/github-action@1.1.3
+    - name: (run) test
+      uses: ./.github/actions/test
       with:
-        github-token: ${{ secrets.github_token }}
-        path-to-lcov: coverage/target.lcov
-    - name: (check) coverage rate
-      # [!] check for coverage rate: greather than 85%
-      shell: bash
-      run: .bin/check-coverage.sh 85 coverage/target.lcov
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        CARGO_REGISTRY_TOKEN: ${{ env.CARGO_REGISTRY_TOKEN }}
 
   docs:
     runs-on: ubuntu-latest
@@ -84,37 +55,21 @@ jobs:
     steps:
     - name: (checkout) source code
       uses: actions/checkout@v2
-    - name: (setup) environment
-      uses: ./.github/actions/setup
-
-    - name: (docs) rustdoc
-      shell: bash
-      run: cargo doc
-    - name: (docs) doxygen
-      uses: mattnotmitt/doxygen-action@v1
+    - name: (run) docs
+      uses: ./.github/actions/docs
+      with:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        CARGO_REGISTRY_TOKEN: ${{ env.CARGO_REGISTRY_TOKEN }}
 
   release:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: [ docs ]
 
     steps:
     - name: (checkout) source code
       uses: actions/checkout@v2
-    - name: (setup) environment
-      uses: ./.github/actions/setup
-
-    - name: (install) yarn
-      shell: bash
-      run: yarn
-
-    - name: (install) rustc-dev
-      shell: bash
-      run: rustup component add rustc-dev
-    - name: (install) semantic-release-rust
-      shell: bash
-      run: cargo install semantic-release-rust --version 1.0.0-alpha.8
-
     - name: (run) release
-      shell: bash
-      run: yarn run semantic-release
+      uses: ./.github/actions/release
+      with:
+        GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+        CARGO_REGISTRY_TOKEN: ${{ env.CARGO_REGISTRY_TOKEN }}
