@@ -1,6 +1,6 @@
 [package]
 name = "unid"
-version = "0.1.2"
+version ="0.1.3"
 authors = [ "UNiD <>" ]
 edition = "2018"
 license-file = "LICENSE"
