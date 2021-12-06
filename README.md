@@ -23,7 +23,6 @@
   Automate device security provisioning with edge intelligence
 </p>
 
-
 ## Features
 
 - Abstract the dev complexity of edge security
