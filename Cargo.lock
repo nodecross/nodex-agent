@@ -269,7 +269,7 @@ checksum = "b63708a265f51345575b27fe43f9500ad611579e764c79edbc2037b1121959ec"
 
 [[package]]
 name = "unid"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "base64",
  "cstr_core",
