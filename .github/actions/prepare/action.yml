@@ -13,6 +13,3 @@ runs:
       uses: actions/checkout@v2
     - name: (check) conventional commits
       uses: webiny/action-conventional-commits@v1.0.3
-    - name: (check) lint
-      shell: bash
-      run: make lint
