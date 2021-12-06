@@ -3,7 +3,7 @@
   "plugins": [
     [ "@semantic-release/commit-analyzer", {} ],
     [ "@semantic-release/exec", {
-      "prepareCmd": "echo ${nextRelease.version} > VERSION"
+      "prepareCmd": "echo ${nextRelease.version} > .VERSION"
     } ]
   ]
 }

@@ -22,35 +22,45 @@ runs:
       shell: bash
       run: cargo install semantic-release-rust --version 1.0.0-alpha.8
 
+    - name: (run) generate release branch name
+      id: generate-release-branch-name
+      shell: bash
+      run: echo "::set-output name=NAME::release/$(date +%s)"
+
     - name: (run) set to bump-up mode
       shell: bash
-      run: mv ".releaserc_bump_up.json" ".releaserc.json"
+      run: mv -v ".releaserc_bump_up.json" ".releaserc.json"
 
     - name: (run) bump-up
+      id: bump-up
       shell: bash
       run: |
         yarn run semantic-release
 
-        [[ -f "VERSION" ]] && {
-          semantic-release-rust prepare "$(cat VERSION)"
+        [[ -f ".VERSION" ]] && {
+          # bump up
+          semantic-release-rust prepare "$(cat .VERSION)"
+
+          # set outputs
+          echo "::set-output name=VERSION::$(cat .VERSION)"
+
+          # clean up
+          rm -fv ".VERSION"
         } || :
 
-    - name: (run) commit files
+    - name: (run) clean up
       shell: bash
-      run: |
-        [[ -f "VERSION" ]] && {
-          git config --local user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git config --local user.name  "${GITHUB_ACTOR} [bot]"
-          git add Cargo.*
-          git commit -m "build: bump up to $(cat VERSION)"
-        } || :
+      run: mv -v ".releaserc.json" ".releaserc_bump_up.json"
 
-    - name: (run) push changes
-      uses: ad-m/github-push-action@master
+    - name: (run) create pull request
+      uses: peter-evans/create-pull-request@v3
       with:
-        github_token: ${{ inputs.github-token }}
-        branch: ${{ github.ref }}
-
-    - name: (run) restore mode
-      shell: bash
-      run: mv ".releaserc.json" ".releaserc_bump_up.json"
+        token: ${{ inputs.github-token }}
+        commit-message: chore(release): bump up to ${{ steps.bump-up.outputs.VERSION }}
+        committer: ${{ github.actor }} [bot] <${{ github.actor }}@users.noreply.github.com>
+        branch: ${{ steps.generate-release-branch-name.outputs.NAME }}
+        branch-suffix: random
+        delete-branch: true
+        title: [release] Bump up to ${{ steps.bump-up.outputs.VERSION }}
+        body: [release] Bump up to ${{ steps.bump-up.outputs.VERSION }}
+        labels: release
