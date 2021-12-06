@@ -10,3 +10,5 @@ profraw/
 default.profraw
 html/
 latex/
+.VERSION
+.releaserc.json

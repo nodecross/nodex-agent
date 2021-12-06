@@ -25,17 +25,17 @@ runs:
     - name: (run) generate release branch name
       id: generate-release-branch-name
       shell: bash
-      run: echo "::set-output name=NAME::release/$(date +%s)"
+      run: echo "::set-output name=NAME::release/release-$(date +%s)"
 
     - name: (run) set to bump-up mode
       shell: bash
-      run: mv -v ".releaserc_bump_up.json" ".releaserc.json"
+      run: cp -pfv ".releaserc_bump_up.json" ".releaserc.json"
 
     - name: (run) bump-up
       id: bump-up
       shell: bash
       run: |
-        yarn run semantic-release
+        yarn run semantic-release --dry-run
 
         [[ -f ".VERSION" ]] && {
           # bump up
@@ -43,14 +43,7 @@ runs:
 
           # set outputs
           echo "::set-output name=VERSION::$(cat .VERSION)"
-
-          # clean up
-          rm -fv ".VERSION"
         } || :
-
-    - name: (run) clean up
-      shell: bash
-      run: mv -v ".releaserc.json" ".releaserc_bump_up.json"
 
     - name: (run) create pull request
       uses: peter-evans/create-pull-request@v3
@@ -60,7 +53,10 @@ runs:
         committer: "${{ github.actor }} [bot] <${{ github.actor }}@users.noreply.github.com>"
         branch: "${{ steps.generate-release-branch-name.outputs.NAME }}"
         branch-suffix: random
+        title: "[release] bump up to ${{ steps.bump-up.outputs.VERSION }}"
+        body: |
+          "[release] bump up to ${{ steps.bump-up.outputs.VERSION }}"
         delete-branch: true
-        title: "[release] Bump up to ${{ steps.bump-up.outputs.VERSION }}"
-        body: "[release] Bump up to ${{ steps.bump-up.outputs.VERSION }}"
+        assignees: vaachii
+        reviewers: vaachii
         labels: release
