@@ -40,6 +40,13 @@ runs:
           echo "::set-output name=VERSION::$(cat .VERSION)"
         } || :
 
+    - name: (run) build
+      # re-generate `Cargo.lock` file
+      uses: ./.github/actions/build
+      with:
+        github-token: ${{ inputs.github-token }}
+        cargo-registry-token: ${{ inputs.cargo-registry-token }}
+
     - name: (run) create pull request
       uses: peter-evans/create-pull-request@v3
       with:
@@ -50,7 +57,9 @@ runs:
         branch-suffix: random
         title: "[release] bump up to ${{ steps.bump-up.outputs.VERSION }}"
         body: |
-          "[release] bump up to ${{ steps.bump-up.outputs.VERSION }}"
+          [release] bump up to ${{ steps.bump-up.outputs.VERSION }}
+
+          This PullRequest was automatically created by GitHub Workflow. Please review and then accept or reject.
         delete-branch: true
         assignees: vaachii
         reviewers: vaachii
