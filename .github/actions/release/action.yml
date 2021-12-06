@@ -2,8 +2,10 @@ name: release
 inputs:
   github-token:
     required: true
+    type: string
   cargo-registry-token:
     required: true
+    type: string
 runs:
   using: composite
   steps:
@@ -44,6 +46,7 @@ runs:
       # re-generate `Cargo.lock` file
       uses: ./.github/actions/build
       with:
+        checkout: false
         github-token: ${{ inputs.github-token }}
         cargo-registry-token: ${{ inputs.cargo-registry-token }}
 

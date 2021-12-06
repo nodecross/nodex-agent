@@ -2,8 +2,10 @@ name: prepare
 inputs:
   github-token:
     required: true
+    type: string
   cargo-registry-token:
     required: true
+    type: string
 runs:
   using: composite
   steps:

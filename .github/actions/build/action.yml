@@ -1,13 +1,20 @@
 name: build
 inputs:
+  checkout:
+    required: false
+    default: true
+    type: boolean
   github-token:
     required: true
+    type: string
   cargo-registry-token:
     required: true
+    type: string
 runs:
   using: composite
   steps:
     - name: (checkout) source code
+      if: ${{ inputs.checkout }} == true
       uses: actions/checkout@v2
     - name: (setup) environment
       uses: ./.github/actions/shared
