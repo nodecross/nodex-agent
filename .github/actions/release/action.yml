@@ -55,12 +55,12 @@ runs:
     - name: (run) create pull request
       uses: peter-evans/create-pull-request@v3
       with:
-        token: ${{ inputs.github-token }}
-        commit-message: chore(release): bump up to ${{ steps.bump-up.outputs.VERSION }}
-        committer: ${{ github.actor }} [bot] <${{ github.actor }}@users.noreply.github.com>
-        branch: ${{ steps.generate-release-branch-name.outputs.NAME }}
+        token: "${{ inputs.github-token }}"
+        commit-message: "chore(release): bump up to ${{ steps.bump-up.outputs.VERSION }}"
+        committer: "${{ github.actor }} [bot] <${{ github.actor }}@users.noreply.github.com>"
+        branch: "${{ steps.generate-release-branch-name.outputs.NAME }}"
         branch-suffix: random
         delete-branch: true
-        title: [release] Bump up to ${{ steps.bump-up.outputs.VERSION }}
-        body: [release] Bump up to ${{ steps.bump-up.outputs.VERSION }}
+        title: "[release] Bump up to ${{ steps.bump-up.outputs.VERSION }}"
+        body: "[release] Bump up to ${{ steps.bump-up.outputs.VERSION }}"
         labels: release
