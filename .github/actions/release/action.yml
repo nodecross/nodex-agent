@@ -22,11 +22,6 @@ runs:
       shell: bash
       run: cargo install semantic-release-rust --version 1.0.0-alpha.8
 
-    - name: (run) generate release branch name
-      id: generate-release-branch-name
-      shell: bash
-      run: echo "::set-output name=NAME::release/release-$(date +%s)"
-
     - name: (run) set to bump-up mode
       shell: bash
       run: cp -pfv ".releaserc_bump_up.json" ".releaserc.json"
@@ -51,7 +46,7 @@ runs:
         token: "${{ inputs.github-token }}"
         commit-message: "chore(release): bump up to ${{ steps.bump-up.outputs.VERSION }}"
         committer: "${{ github.actor }} [bot] <${{ github.actor }}@users.noreply.github.com>"
-        branch: "${{ steps.generate-release-branch-name.outputs.NAME }}"
+        branch: release/release
         branch-suffix: random
         title: "[release] bump up to ${{ steps.bump-up.outputs.VERSION }}"
         body: |
