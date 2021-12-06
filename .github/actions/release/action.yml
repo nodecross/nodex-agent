@@ -63,6 +63,9 @@ runs:
           [release] bump up to ${{ steps.bump-up.outputs.VERSION }}
 
           This PullRequest was automatically created by GitHub Workflow. Please review and then accept or reject.
+
+          [ ] Version number is correct ?
+          [ ] `Cargo.toml` and `Cargo.lock` files included in pull request ?
         delete-branch: true
         assignees: vaachii
         reviewers: vaachii
