@@ -9,6 +9,9 @@ build-renesas: build-renesas-ra6m3
 
 build: build-renesas
 
+lint:
+	$(CARGO) clippy --all-targets --all-features -- -D warnings
+
 test:
 	LLVM_PROFILE_FILE='coverage/target-%p-%m.profraw' RUSTFLAGS='-Zinstrument-coverage' $(CARGO) test --verbose
 

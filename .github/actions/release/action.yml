@@ -42,9 +42,9 @@ runs:
           echo "::set-output name=VERSION::$(cat .VERSION)"
         } || :
 
-    - name: (run) build
+    - name: (run) lint
       # re-generate `Cargo.lock` file
-      uses: ./.github/actions/build
+      uses: ./.github/actions/lint
       with:
         checkout: false
         github-token: ${{ inputs.github-token }}

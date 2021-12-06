@@ -1,5 +1,9 @@
-name: prepare
+name: lint
 inputs:
+  checkout:
+    required: false
+    default: true
+    type: boolean
   github-token:
     required: true
     type: string
@@ -10,6 +14,7 @@ runs:
   using: composite
   steps:
     - name: (checkout) source code
+      if: ${{ inputs.checkout }} == true
       uses: actions/checkout@v2
     - name: (check) conventional commits
       uses: webiny/action-conventional-commits@v1.0.3

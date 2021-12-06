@@ -1,1 +1,1 @@
-cargo clippy --all-targets --all-features -- -D warnings
+make lint
