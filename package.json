@@ -7,7 +7,7 @@
     "husky": "^7.0.2",
     "lcov-summary": "^1.0.1",
     "pinst": "^2.1.6",
-    "semantic-release": "^18.0.1"
+    "semantic-release": "^19.0.3"
   },
   "lint-staged": {
     "*.{rs}": "cargo clippy"
