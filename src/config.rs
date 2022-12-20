@@ -9,59 +9,62 @@ use std::fs;
 
 use crate::unid::errors::UNiDError;
 
-pub struct SignKeyPair {
+pub struct KeyPair {
     pub public_key: Vec<u8>,
     pub secret_key: Vec<u8>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct SignKeyPairConfig {
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct KeyPairConfig {
     public_key: String,
     secret_key: String,
 }
 
-pub struct UpdateKeyPair {
-    pub public_key: Vec<u8>,
-    pub secret_key: Vec<u8>,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct KeyPairsConfig {
+    sign: Option<KeyPairConfig>,
+    update: Option<KeyPairConfig>,
+    recover: Option<KeyPairConfig>,
+    encrypt: Option<KeyPairConfig>,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct UpdateKeyPairConfig {
-    public_key: String,
-    secret_key: String,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Extension {
+    pub filename: String,
+    pub symbol: String,
 }
 
-pub struct RecoverKeyPair {
-    pub public_key: Vec<u8>,
-    pub secret_key: Vec<u8>,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TRNGExtensionConfig {
+    pub read: Extension,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct RecoverKeyPairConfig {
-    public_key: String,
-    secret_key: String,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SecureKeystoreExtensionConfig {
+    pub write: Extension,
+    pub read: Extension,
 }
 
-pub struct EncryptKeyPair {
-    pub public_key: Vec<u8>,
-    pub secret_key: Vec<u8>,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CipherExtensionConfig {
+    pub encrypt: Extension,
+    pub decrypt: Extension,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-struct EncryptKeyPairConfig {
-    public_key: String,
-    secret_key: String,
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ExtensionsConfig {
+    pub trng: Option<TRNGExtensionConfig>,
+    pub secure_keystore: Option<SecureKeystoreExtensionConfig>,
+    pub cipher: Option<CipherExtensionConfig>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
 pub struct ConfigRoot {
     did: Option<String>,
     mnemonic: Option<String>,
-    sign: Option<SignKeyPairConfig>,
-    update: Option<UpdateKeyPairConfig>,
-    recover: Option<RecoverKeyPairConfig>,
-    encrypt: Option<EncryptKeyPairConfig>,
+    key_pairs: KeyPairsConfig,
+    extensions: ExtensionsConfig,
     is_initialized: bool,
     schema_version: u8,
 }
@@ -71,19 +74,27 @@ impl Default for ConfigRoot {
         ConfigRoot {
             did: None,
             mnemonic: None,
-            sign: None,
-            update: None,
-            recover: None,
-            encrypt: None,
+            key_pairs: KeyPairsConfig {
+                sign: None,
+                update: None,
+                recover: None,
+                encrypt: None,
+            },
+            extensions: ExtensionsConfig {
+                trng: None,
+                secure_keystore: None,
+                cipher: None,
+            },
             is_initialized: false,
             schema_version: 1,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct AppConfig {
     config: HomeConfig,
-    root: ConfigRoot
+    root: ConfigRoot,
 }
 
 impl AppConfig {
@@ -100,7 +111,7 @@ impl AppConfig {
     }
 
     pub fn new() -> Self {
-        let config = HomeConfig::new("unid", "config");
+        let config = HomeConfig::with_config_dir("unid", "config");
         let config_dir = config.path().parent();
 
         if ! Path::exists(config.path()) {
@@ -131,7 +142,7 @@ impl AppConfig {
     pub fn write(&self) -> Result<(), UNiDError> {
         match self.config.save_json(&self.root) {
             Ok(v) => Ok(v),
-            Err(_) => panic!(),
+            Err(_) => panic!()
         }
     }
 
@@ -156,9 +167,59 @@ impl AppConfig {
         }
     }
 
+    // NOTE: trng - read
+    pub fn load_trng_read_sig(&self) -> Option<Extension> {
+        match self.root.extensions.trng.clone() {
+            Some(v) => {
+                Some(v.read)
+            },
+            None => None,
+        }
+    }
+
+    // NOTE: secure_keystore - write
+    pub fn load_secure_keystore_write_sig(&self) -> Option<Extension> {
+        match self.root.extensions.secure_keystore.clone() {
+            Some(v) => {
+                Some(v.write)
+            },
+            None => None,
+        }
+    }
+
+    // NOTE: secure_keystore - read
+    pub fn load_secure_keystore_read_sig(&self) -> Option<Extension> {
+        match self.root.extensions.secure_keystore.clone() {
+            Some(v) => {
+                Some(v.read)
+            },
+            None => None,
+        }
+    }
+
+    // NOTE: cipher - encrypt
+    pub fn load_cipher_encrypt_sig(&self) -> Option<Extension> {
+        match self.root.extensions.cipher.clone() {
+            Some(v) => {
+                Some(v.encrypt)
+            },
+            None => None,
+        }
+    }
+
+    // NOTE: cipher - decrypt
+    pub fn load_cipher_decrypt_sig(&self) -> Option<Extension> {
+        match self.root.extensions.cipher.clone() {
+            Some(v) => {
+                Some(v.decrypt)
+            },
+            None => None,
+        }
+    }
+
     // NOTE: SIGN
-    pub fn load_sign_key_pair(&self) -> Option<SignKeyPair> {
-        match self.root.sign.clone() {
+    pub fn load_sign_key_pair(&self) -> Option<KeyPair> {
+        match self.root.key_pairs.sign.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -169,36 +230,36 @@ impl AppConfig {
                     None => return None,
                 };
 
-                Some(SignKeyPair { public_key: pk, secret_key: sk })
+                Some(KeyPair { public_key: pk, secret_key: sk })
             },
             None => None,
         }
     }
 
-    pub fn save_sign_key_pair(&mut self, value: &SignKeyPair) {
+    pub fn save_sign_key_pair(&mut self, value: &KeyPair) -> Result<(), UNiDError> {
         let pk = match self.encode(&Some(value.public_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
         let sk = match self.encode(&Some(value.secret_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
 
-        self.root.sign = Some(SignKeyPairConfig {
+        self.root.key_pairs.sign = Some(KeyPairConfig {
             public_key: pk,
             secret_key: sk,
         });
 
         match self.write() {
-            Ok(_) => {},
+            Ok(_) => Ok(()),
             Err(_) => panic!()
         }
     }
 
     // NOTE: UPDATE
-    pub fn load_update_key_pair(&self) -> Option<UpdateKeyPair> {
-        match self.root.update.clone() {
+    pub fn load_update_key_pair(&self) -> Option<KeyPair> {
+        match self.root.key_pairs.update.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -209,36 +270,36 @@ impl AppConfig {
                     None => return None,
                 };
 
-                Some(UpdateKeyPair { public_key: pk, secret_key: sk })
+                Some(KeyPair { public_key: pk, secret_key: sk })
             },
             None => None,
         }
     }
 
-    pub fn save_update_key_pair(&mut self, value: &UpdateKeyPair) {
+    pub fn save_update_key_pair(&mut self, value: &KeyPair) -> Result<(), UNiDError> {
         let pk = match self.encode(&Some(value.public_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
         let sk = match self.encode(&Some(value.secret_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
 
-        self.root.update = Some(UpdateKeyPairConfig {
+        self.root.key_pairs.update = Some(KeyPairConfig {
             public_key: pk,
             secret_key: sk,
         });
 
         match self.write() {
-            Ok(_) => {},
+            Ok(_) => Ok(()),
             Err(_) => panic!()
         }
     }
 
     // NOTE: RECOVER
-    pub fn load_recovery_key_pair(&self) -> Option<RecoverKeyPair> {
-        match self.root.recover.clone() {
+    pub fn load_recovery_key_pair(&self) -> Option<KeyPair> {
+        match self.root.key_pairs.recover.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -249,36 +310,36 @@ impl AppConfig {
                     None => return None,
                 };
 
-                Some(RecoverKeyPair { public_key: pk, secret_key: sk })
+                Some(KeyPair { public_key: pk, secret_key: sk })
             },
             None => None,
         }
     }
 
-    pub fn save_recover_key_pair(&mut self, value: &RecoverKeyPair) {
+    pub fn save_recover_key_pair(&mut self, value: &KeyPair) -> Result<(), UNiDError> {
         let pk = match self.encode(&Some(value.public_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
         let sk = match self.encode(&Some(value.secret_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
 
-        self.root.recover = Some(RecoverKeyPairConfig {
+        self.root.key_pairs.recover = Some(KeyPairConfig {
             public_key: pk,
             secret_key: sk,
         });
 
         match self.write() {
-            Ok(_) => {},
+            Ok(_) => Ok(()),
             Err(_) => panic!()
         }
     }
 
     // NOTE: ENCRYPT
-    pub fn load_encrypt_key_pair(&self) -> Option<EncryptKeyPair> {
-        match self.root.encrypt.clone() {
+    pub fn load_encrypt_key_pair(&self) -> Option<KeyPair> {
+        match self.root.key_pairs.encrypt.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -289,29 +350,29 @@ impl AppConfig {
                     None => return None,
                 };
 
-                Some(EncryptKeyPair { public_key: pk, secret_key: sk })
+                Some(KeyPair { public_key: pk, secret_key: sk })
             },
             None => None,
         }
     }
 
-    pub fn save_encrypt_key_pair(&mut self, value: &EncryptKeyPair) {
+    pub fn save_encrypt_key_pair(&mut self, value: &KeyPair) -> Result<(), UNiDError> {
         let pk = match self.encode(&Some(value.public_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
         let sk = match self.encode(&Some(value.secret_key.clone())) {
             Some(v) => v,
-            None => return,
+            None => return Err(UNiDError {}),
         };
 
-        self.root.encrypt = Some(EncryptKeyPairConfig {
+        self.root.key_pairs.encrypt = Some(KeyPairConfig {
             public_key: pk,
             secret_key: sk,
         });
 
         match self.write() {
-            Ok(_) => {},
+            Ok(_) => Ok(()),
             Err(_) => panic!()
         }
     }

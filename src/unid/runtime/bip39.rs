@@ -1,8 +1,6 @@
 use bip39::{Mnemonic, Language};
 
-use crate::unid::errors::UNiDError;
-
-use super::random::Random;
+use crate::unid::{errors::UNiDError, extension::trng::TRNG};
 
 pub enum MnemonicType {
     Words12,
@@ -24,7 +22,9 @@ impl BIP39 {
             MnemonicType::Words24 => 256,
         };
 
-        let seed = match Random::bytes(&(bits / 8)) {
+        let trng = TRNG::new();
+
+        let seed = match trng.read(&(bits / 8)) {
             Ok(v) => v,
             Err(_) => return Err(UNiDError{})
         };

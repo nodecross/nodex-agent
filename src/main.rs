@@ -9,14 +9,40 @@ extern crate env_logger;
 
 use actix_web::{ middleware, HttpServer, App, web };
 use clap::Parser;
+use config::KeyPair;
 use daemonize::Daemonize;
-use std::{fs::{File, self}, io, path::PathBuf};
+use unid::{keyring::mnemonic::MnemonicKeyring, extension::secure_keystore::{SecureKeyStore, SecureKeyStoreType}};
+use std::{fs::{File, self}, path::PathBuf, sync::{Arc, Mutex, Once}};
 use dirs;
+
+use crate::config::AppConfig;
 
 mod unid;
 mod services;
 mod config;
 mod controllers;
+
+#[derive(Clone)]
+pub struct SingletonAppConfig {
+    inner: Arc<Mutex<AppConfig>>,
+}
+
+pub fn app_config() -> Box<SingletonAppConfig> {
+    static mut SINGLETON: Option<Box<SingletonAppConfig>> = None;
+    static ONCE: Once = Once::new();
+
+    unsafe {
+        ONCE.call_once(|| {
+            let singleton = SingletonAppConfig {
+                inner: Arc::new(Mutex::new(AppConfig::new()))
+            };
+
+            SINGLETON = Some(Box::new(singleton))
+        });
+
+        SINGLETON.clone().unwrap()
+    }
+}
 
 #[derive(Parser, Debug)]
 #[clap(name = "unid-agent")]
@@ -60,9 +86,16 @@ async fn run(sock_path: &PathBuf) -> std::io::Result<()> {
     .await
 }
 
+
 fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=info");
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
+
+    let config = AppConfig::new();
+    match config.write() {
+        Ok(()) => (),
+        Err(_) => panic!(),
+    };
 
     let home_dir = match dirs::home_dir() {
         Some(v) => v,
@@ -83,6 +116,7 @@ fn main() -> std::io::Result<()> {
 
     let stdout = File::create(logs_dir.clone().join("unid.log")).unwrap();
     let stderr = File::create(logs_dir.clone().join("unid.err")).unwrap();
+    let sock_path = runtime_dir.clone().join("unid.sock");
 
     let daemonize = Daemonize::new()
         .pid_file(runtime_dir.clone().join("unid.pid"))
@@ -90,7 +124,6 @@ fn main() -> std::io::Result<()> {
         .stdout(stdout)
         .stderr(stderr);
 
-    let sock_path = runtime_dir.clone().join("unid.sock");
     let args = Args::parse();
 
     if args.daemonize {

@@ -5,3 +5,4 @@ pub mod keyring;
 pub mod sidetree;
 pub mod cipher;
 pub mod schema;
+pub mod extension;

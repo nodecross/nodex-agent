@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::{unid::{errors::UNiDError, keyring, sidetree::payload::{OperationPayload, DIDCreateRequest, CommitmentKeys, DIDCreateResponse, DIDResolutionResponse}, utils::http_client::{HttpClient, HttpClientConfig}}, config::{AppConfig, SignKeyPair, UpdateKeyPair, RecoverKeyPair, EncryptKeyPair}};
+use crate::{unid::{errors::UNiDError, keyring, sidetree::payload::{OperationPayload, DIDCreateRequest, CommitmentKeys, DIDCreateResponse, DIDResolutionResponse}, utils::http_client::{HttpClient, HttpClientConfig}}, config::KeyPair};
 use rumqttc::{MqttOptions, AsyncClient, QoS};
 use serde_json::Value;
 use cuid;

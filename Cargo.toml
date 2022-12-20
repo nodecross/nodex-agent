@@ -49,6 +49,7 @@ serde_jcs = { version = "0.1.0" }
 hex = { version = "0.4.3" }
 ibig = { version = "0.3.5" }
 arrayref = { version = "0.3.6" }
+libloading = { version = "0.7.4" }
 
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4" }
@@ -77,8 +78,8 @@ colored = { version = "2" }
 log = { version = "0.4.0" }
 env_logger = { version = "0.9.0" }
 
-home-config = { version = "0.4.0", features = ["json", "yaml", "toml"] }
-clap = { version = "3.2.17", features = ["derive"] }
+home-config = { version = "0.6.0", features = ["json", "yaml", "toml"] }
+clap = { version = "4.0.18", features = ["derive"] }
 daemonize = { version = "0.4.1" }
 
 dirs = { version = "4.0.0" }

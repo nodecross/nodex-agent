@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::{unid::{errors::UNiDError, runtime::{self, bip39::BIP39}}, config::{AppConfig, SignKeyPair, UpdateKeyPair, RecoverKeyPair, EncryptKeyPair}};
+use crate::{unid::{errors::UNiDError, runtime::{self, bip39::BIP39}, extension::secure_keystore::{SecureKeyStore, SecureKeyStoreType}}, config::{KeyPair, AppConfig}, app_config, SingletonAppConfig};
 
 use super::secp256k1::{Secp256k1, Secp256k1Context};
 
@@ -10,7 +10,8 @@ pub struct MnemonicKeyring {
     update  : Secp256k1,
     recovery: Secp256k1,
     encrypt : Secp256k1,
-    config  : AppConfig,
+    config  : Box<SingletonAppConfig>,
+    secure_keystore: SecureKeyStore
 }
 
 impl MnemonicKeyring {
@@ -20,65 +21,86 @@ impl MnemonicKeyring {
     const ENCRYPT_DERIVATION_PATH: &'static str  = "m/44'/0'/0'/0/40";
 
     pub fn load_keyring() -> Result<Self, UNiDError> {
-        let config = AppConfig::new();
+        let config = app_config();
+        let secure_keystore = SecureKeyStore::new();
 
-        // NOTE:
-        if !config.get_is_initialized() {
-            return Err(UNiDError{})
-        }
-
-        let mnemonic = match config.get_mnemonic() {
-            Some(v) => v,
-            None => return Err(UNiDError{})
+        let mnemonic = match config.inner.lock() {
+            Ok(config) => {
+                match config.get_mnemonic() {
+                    Some(v) => v,
+                    None => return Err(UNiDError{})
+                }
+            },
+            _ => return Err(UNiDError {}),
         };
 
-        let sign = match config.load_sign_key_pair() {
-            Some(v) => {
-                match Secp256k1::new(&Secp256k1Context {
-                    public: v.public_key,
-                    secret: v.secret_key,
-                }) {
-                    Ok(v) => v,
-                    Err(_) => return Err(UNiDError{}),
+        let sign = match secure_keystore.read(&SecureKeyStoreType::Sign) {
+            Ok(v) => {
+                match v {
+                    Some(v) => {
+                        match Secp256k1::new(&Secp256k1Context {
+                            public: v.public_key,
+                            secret: v.secret_key,
+                        }) {
+                            Ok(v) => v,
+                            _ => return Err(UNiDError{}),
+                        }
+                    },
+                    _ => return Err(UNiDError{}),
                 }
             },
-            None => return Err(UNiDError{}),
+            _ => return Err(UNiDError {}),
         };
-        let update = match config.load_update_key_pair() {
-            Some(v) => {
-                match Secp256k1::new(&Secp256k1Context {
-                    public: v.public_key,
-                    secret: v.secret_key,
-                }) {
-                    Ok(v) => v,
-                    Err(_) => return Err(UNiDError{}),
+        let update = match secure_keystore.read(&SecureKeyStoreType::Update) {
+            Ok(v) => {
+                match v {
+                    Some(v) => {
+                        match Secp256k1::new(&Secp256k1Context {
+                            public: v.public_key,
+                            secret: v.secret_key,
+                        }) {
+                            Ok(v) => v,
+                            _ => return Err(UNiDError{}),
+                        }
+                    },
+                    _ => return Err(UNiDError{}),
                 }
             },
-            None => return Err(UNiDError{}),
+            _ => return Err(UNiDError {}),
         };
-        let recovery = match config.load_recovery_key_pair() {
-            Some(v) => {
-                match Secp256k1::new(&Secp256k1Context {
-                    public: v.public_key,
-                    secret: v.secret_key,
-                }) {
-                    Ok(v) => v,
-                    Err(_) => return Err(UNiDError{}),
+        let recovery = match secure_keystore.read(&SecureKeyStoreType::Recover) {
+            Ok(v) => {
+                match v {
+                    Some(v) => {
+                        match Secp256k1::new(&Secp256k1Context {
+                            public: v.public_key,
+                            secret: v.secret_key,
+                        }) {
+                            Ok(v) => v,
+                            _ => return Err(UNiDError{}),
+                        }
+                    },
+                    _ => return Err(UNiDError{}),
                 }
             },
-            None => return Err(UNiDError{}),
+            _ => return Err(UNiDError {})
         };
-        let encrypt = match config.load_encrypt_key_pair() {
-            Some(v) => {
-                match Secp256k1::new(&Secp256k1Context {
-                    public: v.public_key,
-                    secret: v.secret_key,
-                }) {
-                    Ok(v) => v,
-                    Err(_) => return Err(UNiDError{}),
+        let encrypt = match secure_keystore.read(&SecureKeyStoreType::Encrypt) {
+            Ok(v) => {
+                match v {
+                    Some(v) => {
+                        match Secp256k1::new(&Secp256k1Context {
+                            public: v.public_key,
+                            secret: v.secret_key,
+                        }) {
+                            Ok(v) => v,
+                            _ => return Err(UNiDError{}),
+                        }
+                    },
+                    _ => return Err(UNiDError{}),
                 }
             },
-            None => return Err(UNiDError{}),
+            _ => return Err(UNiDError {})
         };
 
         Ok(MnemonicKeyring {
@@ -88,18 +110,13 @@ impl MnemonicKeyring {
             recovery,
             encrypt,
             config,
+            secure_keystore,
         })
     }
 
     pub fn create_keyring() -> Result<Self, UNiDError> {
-        let config = AppConfig::new();
-
-        // NOTE: already created keyring
-
-        #[cfg(not(test))]
-        if config.get_is_initialized() {
-            return Err(UNiDError{})
-        }
+        let config = app_config();
+        let secure_keystore = SecureKeyStore::new();
 
         let mnemonic = match runtime::bip39::BIP39::generate_mnemonic(&runtime::bip39::MnemonicType::Words24) {
             Ok(v) => v,
@@ -134,6 +151,7 @@ impl MnemonicKeyring {
             recovery,
             encrypt,
             config,
+            secure_keystore,
         })
     }
 
@@ -169,33 +187,66 @@ impl MnemonicKeyring {
     }
 
     pub fn save(&mut self, did: &str) {
-        self.config.save_sign_key_pair(&SignKeyPair {
+        match self.secure_keystore.write(&SecureKeyStoreType::Sign, &KeyPair {
             public_key: self.get_sign_key_pair().get_public_key(),
             secret_key: self.get_sign_key_pair().get_secret_key(),
-        });
-        self.config.save_update_key_pair(&UpdateKeyPair {
+        }) {
+            Ok(_) => (),
+            _ => panic!(),
+        };
+        match self.secure_keystore.write(&SecureKeyStoreType::Update, &KeyPair {
             public_key: self.get_update_key_pair().get_public_key(),
             secret_key: self.get_update_key_pair().get_secret_key()
-        });
-        self.config.save_recover_key_pair(&RecoverKeyPair {
+        }) {
+            Ok(_) => (),
+            _ => panic!(),
+        };
+        match self.secure_keystore.write(&SecureKeyStoreType::Recover, &KeyPair {
             public_key: self.get_recovery_key_pair().get_public_key(),
             secret_key: self.get_recovery_key_pair().get_secret_key(),
-        });
-        self.config.save_encrypt_key_pair(&EncryptKeyPair {
+        }) {
+            Ok(_) => (),
+            _ => panic!(),
+        };
+        match self.secure_keystore.write(&SecureKeyStoreType::Encrypt, &KeyPair {
             public_key: self.get_encrypt_key_pair().get_public_key(),
             secret_key: self.get_encrypt_key_pair().get_secret_key(),
-        });
+        }) {
+            Ok(_) => (),
+            _ => panic!(),
+        };
 
-        self.config.save_did(&did.to_string());
-        self.config.save_mnemonic(&self.mnemonic);
+        match self.config.inner.lock() {
+            Ok(mut config) => {
+                config.save_did(&did.to_string())
+            },
+            _ => panic!(),
+        };
 
-        self.config.save_is_initialized(true);
+        match self.config.inner.lock() {
+            Ok(mut config) => {
+                config.save_mnemonic(&self.mnemonic);
+            },
+            _ => panic!(),
+        };
+
+        match self.config.inner.lock() {
+            Ok(mut config) => {
+                config.save_is_initialized(true);
+            },
+            _ => panic!(),
+        }
     }
 
     pub fn get_identifier(&self) -> Result<String, UNiDError> {
-        match self.config.get_did() {
-            Some(v) => Ok(v),
-            None => Err(UNiDError{})
+        match self.config.inner.lock() {
+            Ok(config) => {
+                match config.get_did() {
+                    Some(v) => Ok(v),
+                    None => Err(UNiDError{})
+                }
+            },
+            _ => return Err(UNiDError {})
         }
     }
 
