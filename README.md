@@ -33,7 +33,7 @@ This repo where we develop libraries to be installed into your devices. It enabl
 
 ## Install
 
-- [Build Guide](https://docs.nodecross.io/build_guide/linux/index.html)
+- [Build Guide](https://docs.nodecross.io/installation/00-overview.html)
 
 ## Developer's Document
 
