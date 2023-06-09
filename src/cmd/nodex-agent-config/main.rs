@@ -72,7 +72,7 @@ fn main() {
                     keyrings: None,
                 },
             };
-            match config_settings.save_toml(&settings) {
+            match config_settings.save_toml(settings) {
                 Ok(_) => {}
                 Err(e) => {
                     eprintln!("Failed to save the settings: {:?}", e);
@@ -88,11 +88,10 @@ fn main() {
                     client_secret: None,
                 },
             };
-            match config_credentials.save_toml(&credentials) {
+            match config_credentials.save_toml(credentials) {
                 Ok(_) => {}
                 Err(e) => {
-                    eprintln!("Failed to save the credentials: {:?}", e);
-                    return;
+                    eprintln!("Failed to save the credentials: {:?}", e)
                 }
             }
         }
@@ -131,11 +130,11 @@ fn main() {
         },
         Commands::Credentials { command } => match command {
             CredentialsSubCommands::Import { file } => {
-                let data = fs::read_to_string(&file).expect("Unable to read file");
+                let data = fs::read_to_string(file).expect("Unable to read file");
                 let creds: credential::CredentialsConfig =
                     serde_json::from_str(&data).expect("Unable to parse JSON");
                 let data = credential::Credentials { credentials: creds };
-                match config_credentials.save_toml(&data) {
+                match config_credentials.save_toml(data) {
                     Ok(_) => print!("0"),
                     Err(_) => print!("1"),
                 }

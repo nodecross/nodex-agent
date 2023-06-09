@@ -128,7 +128,7 @@ impl AppConfig {
             }
         }
         if !self.credentials.path().exists() {
-            match self.credentials.save_toml(&Credentials::default()) {
+            match self.credentials.save_toml(Credentials::default()) {
                 Ok(_) => {}
                 Err(e) => {
                     log::error!("{:?}", e);

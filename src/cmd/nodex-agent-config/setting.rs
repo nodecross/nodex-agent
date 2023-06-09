@@ -57,7 +57,7 @@ impl TomlEditor {
         let mut current_table = self.doc.as_table();
 
         for part in key_parts[..key_parts.len() - 1].iter() {
-            if let Some(item) = current_table.get(*part) {
+            if let Some(item) = current_table.get(part) {
                 if let Some(inner_table) = item.as_table() {
                     current_table = inner_table;
                 } else {
@@ -79,10 +79,10 @@ impl TomlEditor {
             if let Some(value) = item.as_str() {
                 Ok(value.to_string())
             } else {
-                return Err(std::io::Error::new(
+                Err(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
                     "Final key does not point to a string value",
-                ));
+                ))
             }
         } else {
             Err(std::io::Error::new(
@@ -97,7 +97,7 @@ impl TomlEditor {
         let mut current_table = self.doc.as_table_mut();
 
         for part in key_parts[..key_parts.len() - 1].iter() {
-            if let Some(item) = current_table.get_mut(*part) {
+            if let Some(item) = current_table.get_mut(part) {
                 if let Some(inner_table) = item.as_table_mut() {
                     current_table = inner_table;
                 } else {
@@ -115,7 +115,7 @@ impl TomlEditor {
         }
 
         let last_key = key_parts.last().unwrap();
-        if current_table.contains_key(*last_key) {
+        if current_table.contains_key(last_key) {
             current_table[last_key] = value(new_value);
         } else {
             return Err(std::io::Error::new(
