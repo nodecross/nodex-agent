@@ -4,7 +4,6 @@ use serde::Serialize;
 use std::env;
 
 use crate::nodex::errors::NodeXError;
-/////////////////////////////////////////////////////
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
@@ -40,34 +39,18 @@ pub struct ExtensionsWrite {
     pub symbol: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Keyring {
-    public_key: String,
-    private_key: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct KeyringConfig {
-    sing: Keyring,
-    update: Keyring,
-    recover: Keyring,
-    encrypt: Keyring,
-}
-
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Credentials {
     pub credentials: CredentialsConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CredentialsConfig {
     pub did: Option<String>,
     pub client_id: Option<String>,
     pub client_secret: Option<String>,
 }
 
-/////////////////////////////////////////////////////
 pub struct KeyPair {
     pub public_key: Vec<u8>,
     pub private_key: Vec<u8>,
@@ -95,13 +78,13 @@ pub struct Extension {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default)]
-pub struct ConfigRoot {
+pub struct Config {
     keyrings: KeyPairsConfig,
 }
 
-impl Default for ConfigRoot {
+impl Default for Config {
     fn default() -> Self {
-        ConfigRoot {
+        Config {
             keyrings: KeyPairsConfig {
                 sign: None,
                 update: None,
@@ -114,7 +97,7 @@ impl Default for ConfigRoot {
 
 #[derive(Debug)]
 pub struct AppConfig {
-    root: ConfigRoot,
+    config: Config,
     settings: HomeConfig,
     credentials: HomeConfig,
     keyrings: HomeConfig,
@@ -127,25 +110,29 @@ impl AppConfig {
         let credentials = HomeConfig::with_config_dir("nodex", "credentials");
         let keyrings = HomeConfig::with_config_dir("nodex", "keyrings");
 
-        let root = match keyrings.toml::<ConfigRoot>() {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("{:?}", e);
-                panic!()
-            }
-        };
+        let config: Config = Config::default();
 
-        AppConfig { root, settings, credentials, keyrings }
+        AppConfig { config, settings, credentials, keyrings }
     }
 
     pub fn write(&self) -> Result<(), NodeXError> {
-        match self.keyrings.save_toml(&self.root) {
-            Ok(v) => Ok(v),
+        match self.keyrings.save_toml(&self.config) {
+            Ok(_) => {},
             Err(e) => {
                 log::error!("{:?}", e);
                 panic!()
             }
         }
+        if !self.credentials.path().exists() {
+            match self.credentials.save_toml(&Credentials::default()) {
+                Ok(_) => {},
+                Err(e) => {
+                    log::error!("{:?}", e);
+                    panic!()
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn encode(&self, value: &Option<Vec<u8>>) -> Option<String> {
@@ -169,10 +156,7 @@ impl AppConfig {
     pub fn load_trng_read_sig(&self) -> Option<Trng> {
         match self.settings.toml::<Settings>() {
             Ok(v) => v.extensions.trng,
-            Err(e) => {
-                log::error!("{:?}", e);
-                None
-            }
+            Err(_) => None,
         }
     }
 
@@ -186,10 +170,7 @@ impl AppConfig {
                     None
                 }
             }
-            Err(e) => {
-                log::error!("{:?}", e);
-                None
-            }
+            Err(_) => None,
         }
     }
 
@@ -203,16 +184,13 @@ impl AppConfig {
                     None
                 }
             }
-            Err(e) => {
-                log::error!("{:?}", e);
-                None
-            }
+            Err(_) => None,
         }
     }
 
     // NOTE: SIGN
     pub fn load_sign_key_pair(&self) -> Option<KeyPair> {
-        match self.root.keyrings.sign.clone() {
+        match self.config.keyrings.sign.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -242,7 +220,7 @@ impl AppConfig {
             None => return Err(NodeXError {}),
         };
 
-        self.root.keyrings.sign = Some(KeyPairConfig {
+        self.config.keyrings.sign = Some(KeyPairConfig {
             public_key: pk,
             private_key: sk,
         });
@@ -258,7 +236,7 @@ impl AppConfig {
 
     // NOTE: UPDATE
     pub fn load_update_key_pair(&self) -> Option<KeyPair> {
-        match self.root.keyrings.update.clone() {
+        match self.config.keyrings.update.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -288,7 +266,7 @@ impl AppConfig {
             None => return Err(NodeXError {}),
         };
 
-        self.root.keyrings.update = Some(KeyPairConfig {
+        self.config.keyrings.update = Some(KeyPairConfig {
             public_key: pk,
             private_key: sk,
         });
@@ -304,7 +282,7 @@ impl AppConfig {
 
     // NOTE: RECOVER
     pub fn load_recovery_key_pair(&self) -> Option<KeyPair> {
-        match self.root.keyrings.recover.clone() {
+        match self.config.keyrings.recover.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -334,7 +312,7 @@ impl AppConfig {
             None => return Err(NodeXError {}),
         };
 
-        self.root.keyrings.recover = Some(KeyPairConfig {
+        self.config.keyrings.recover = Some(KeyPairConfig {
             public_key: pk,
             private_key: sk,
         });
@@ -350,7 +328,7 @@ impl AppConfig {
 
     // NOTE: ENCRYPT
     pub fn load_encrypt_key_pair(&self) -> Option<KeyPair> {
-        match self.root.keyrings.encrypt.clone() {
+        match self.config.keyrings.encrypt.clone() {
             Some(v) => {
                 let pk = match self.decode(&Some(v.public_key)) {
                     Some(v) => v,
@@ -380,7 +358,7 @@ impl AppConfig {
             None => return Err(NodeXError {}),
         };
 
-        self.root.keyrings.encrypt = Some(KeyPairConfig {
+        self.config.keyrings.encrypt = Some(KeyPairConfig {
             public_key: pk,
             private_key: sk,
         });
