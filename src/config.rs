@@ -13,7 +13,7 @@ pub struct Settings {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Extensions {
     pub trng: Option<Trng>,
-    pub keyrings: Option<Keyrings>,    
+    pub keyrings: Option<Keyrings>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -104,7 +104,6 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-
     pub fn new() -> Self {
         let settings = HomeConfig::with_config_dir("nodex", "settings");
         let credentials = HomeConfig::with_config_dir("nodex", "credentials");
@@ -112,12 +111,17 @@ impl AppConfig {
 
         let config: Config = Config::default();
 
-        AppConfig { config, settings, credentials, keyrings }
+        AppConfig {
+            config,
+            settings,
+            credentials,
+            keyrings,
+        }
     }
 
     pub fn write(&self) -> Result<(), NodeXError> {
         match self.keyrings.save_toml(&self.config) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => {
                 log::error!("{:?}", e);
                 panic!()
@@ -125,7 +129,7 @@ impl AppConfig {
         }
         if !self.credentials.path().exists() {
             match self.credentials.save_toml(&Credentials::default()) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     log::error!("{:?}", e);
                     panic!()
@@ -386,7 +390,7 @@ impl AppConfig {
             Ok(v) => {
                 creds = v;
                 creds.credentials.did = Some(value.to_string());
-            },
+            }
             Err(e) => {
                 log::error!("{:?}", e);
                 panic!()
@@ -400,7 +404,6 @@ impl AppConfig {
             }
         }
     }
-
 }
 
 #[derive(Debug)]

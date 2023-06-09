@@ -14,7 +14,11 @@ impl Trng {
         Trng {}
     }
 
-    fn read_external(&self, extension: &ExtensionsRead, size: &usize) -> Result<Vec<u8>, NodeXError> {
+    fn read_external(
+        &self,
+        extension: &ExtensionsRead,
+        size: &usize,
+    ) -> Result<Vec<u8>, NodeXError> {
         log::info!("Called: read_external");
 
         if Trng::MAX_BUFFER_LENGTH < *size {

@@ -232,7 +232,6 @@ impl MnemonicKeyring {
             Ok(mut config) => config.save_did(did),
             _ => panic!(),
         };
-
     }
 
     pub fn get_identifier(&self) -> Result<String, NodeXError> {
@@ -243,7 +242,6 @@ impl MnemonicKeyring {
             None => Err(NodeXError {}),
         }
     }
-
 }
 
 #[cfg(test)]
@@ -262,5 +260,4 @@ pub mod tests {
         assert_eq!(keyring.get_recovery_key_pair().get_secret_key().len(), 32);
         assert_eq!(keyring.get_encrypt_key_pair().get_secret_key().len(), 32);
     }
-
 }

@@ -1,8 +1,7 @@
-
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Write};
-use toml_edit::{Document, value};
-use serde::{Deserialize, Serialize};
+use toml_edit::{value, Document};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
@@ -12,7 +11,7 @@ pub struct Settings {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Extensions {
     pub trng: Option<Trng>,
-    pub keyrings: Option<Keyrings>,    
+    pub keyrings: Option<Keyrings>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,10 +61,16 @@ impl TomlEditor {
                 if let Some(inner_table) = item.as_table() {
                     current_table = inner_table;
                 } else {
-                    return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid key path"));
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Invalid key path",
+                    ));
                 }
             } else {
-                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Key not found in path"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Key not found in path",
+                ));
             }
         }
 
@@ -74,10 +79,16 @@ impl TomlEditor {
             if let Some(value) = item.as_str() {
                 Ok(value.to_string())
             } else {
-                return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Final key does not point to a string value"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Final key does not point to a string value",
+                ));
             }
         } else {
-            Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Final key not found"))
+            Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Final key not found",
+            ))
         }
     }
 
@@ -90,10 +101,16 @@ impl TomlEditor {
                 if let Some(inner_table) = item.as_table_mut() {
                     current_table = inner_table;
                 } else {
-                    return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid key path"));
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Invalid key path",
+                    ));
                 }
             } else {
-                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Key not found in path"));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::NotFound,
+                    "Key not found in path",
+                ));
             }
         }
 
@@ -101,7 +118,10 @@ impl TomlEditor {
         if current_table.contains_key(*last_key) {
             current_table[last_key] = value(new_value);
         } else {
-            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Final key not found"));
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Final key not found",
+            ));
         }
 
         Ok(())

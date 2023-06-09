@@ -1,9 +1,9 @@
-use home_config::HomeConfig;
 use clap::{Parser, Subcommand};
+use home_config::HomeConfig;
 use std::fs;
 
-mod setting;
 mod credential;
+mod setting;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -14,8 +14,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     #[command(about = "help for init")]
-    Init {
-    },
+    Init {},
     #[command(about = "help for settings")]
     Settings {
         #[command(subcommand)]
@@ -25,7 +24,7 @@ enum Commands {
     Credentials {
         #[command(subcommand)]
         command: CredentialsSubCommands,
-    }
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -41,7 +40,7 @@ enum SettingsSubCommands {
     Get {
         #[arg(short, long)]
         key: String,
-    }
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -55,7 +54,7 @@ enum CredentialsSubCommands {
     Available {
         #[arg(short, long)]
         key: String,
-    }
+    },
 }
 
 fn main() {
@@ -65,7 +64,7 @@ fn main() {
     let config_credentials = HomeConfig::with_config_dir("nodex", "credentials");
 
     match cli.command {
-        Commands::Init { } => {
+        Commands::Init {} => {
             // settings
             let settings = setting::Settings {
                 extensions: setting::Extensions {
@@ -74,7 +73,7 @@ fn main() {
                 },
             };
             match config_settings.save_toml(&settings) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     eprintln!("Failed to save the settings: {:?}", e);
                     return;
@@ -83,70 +82,76 @@ fn main() {
 
             // credentials
             let credentials = credential::Credentials {
-                credentials: credential::CredentialsConfig{
+                credentials: credential::CredentialsConfig {
                     did: None,
                     client_id: None,
                     client_secret: None,
                 },
             };
             match config_credentials.save_toml(&credentials) {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     eprintln!("Failed to save the credentials: {:?}", e);
                     return;
                 }
             }
         }
-        Commands::Settings { command } => {
-            match command {
-                SettingsSubCommands::Set { key, value } => {
-                    let path = config_settings.path().as_path().to_str().expect("Failed path error");
-                    let mut editor = setting::TomlEditor::new(path).expect("Failed open error");
-                    match editor.update_value(&key, &value) {
-                        Ok(_) => print!("0"),
-                        Err(_) => {
-                            print!("1");
-                            return;
-                        },
-                    }
-                    match editor.save(path) {
-                        Ok(_) => print!("0"),
-                        Err(_) => print!("1"),
+        Commands::Settings { command } => match command {
+            SettingsSubCommands::Set { key, value } => {
+                let path = config_settings
+                    .path()
+                    .as_path()
+                    .to_str()
+                    .expect("Failed path error");
+                let mut editor = setting::TomlEditor::new(path).expect("Failed open error");
+                match editor.update_value(&key, &value) {
+                    Ok(_) => print!("0"),
+                    Err(_) => {
+                        print!("1");
+                        return;
                     }
                 }
-                SettingsSubCommands::Get { key } => {
-                    let path = config_settings.path().as_path().to_str().expect("Failed path error");
-                    let editor = setting::TomlEditor::new(path).expect("Failed open error");
-                    match editor.get_value(&key) {
-                        Ok(_) => println!("0"),
-                        Err(_) => println!("1"),
-                    }
+                match editor.save(path) {
+                    Ok(_) => print!("0"),
+                    Err(_) => print!("1"),
                 }
             }
-        }
-        Commands::Credentials { command } => {
-            match command {
-                CredentialsSubCommands::Import { file } => {
-                    let data = fs::read_to_string(&file).expect("Unable to read file");
-                    let creds: credential::CredentialsConfig = serde_json::from_str(&data).expect("Unable to parse JSON");
-                    let data = credential::Credentials {
-                        credentials: creds,
-                    };
-                    match config_credentials.save_toml(&data) {
-                        Ok(_) => print!("0"),
-                        Err(_) => print!("1"),
-                    }
-                }
-                CredentialsSubCommands::Available { key } => {
-                    let path = config_credentials.path().as_path().to_str().expect("Failed path error");
-                    let editor = setting::TomlEditor::new(path).expect("Failed open error");
-                    match editor.get_value(&key) {
-                        Ok(_) => println!("0"),
-                        Err(_) => println!("1"),
-                    }
+            SettingsSubCommands::Get { key } => {
+                let path = config_settings
+                    .path()
+                    .as_path()
+                    .to_str()
+                    .expect("Failed path error");
+                let editor = setting::TomlEditor::new(path).expect("Failed open error");
+                match editor.get_value(&key) {
+                    Ok(_) => println!("0"),
+                    Err(_) => println!("1"),
                 }
             }
-        }
+        },
+        Commands::Credentials { command } => match command {
+            CredentialsSubCommands::Import { file } => {
+                let data = fs::read_to_string(&file).expect("Unable to read file");
+                let creds: credential::CredentialsConfig =
+                    serde_json::from_str(&data).expect("Unable to parse JSON");
+                let data = credential::Credentials { credentials: creds };
+                match config_credentials.save_toml(&data) {
+                    Ok(_) => print!("0"),
+                    Err(_) => print!("1"),
+                }
+            }
+            CredentialsSubCommands::Available { key } => {
+                let path = config_credentials
+                    .path()
+                    .as_path()
+                    .to_str()
+                    .expect("Failed path error");
+                let editor = setting::TomlEditor::new(path).expect("Failed open error");
+                match editor.get_value(&key) {
+                    Ok(_) => println!("0"),
+                    Err(_) => println!("1"),
+                }
+            }
+        },
     }
-
 }

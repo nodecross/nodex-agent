@@ -9,5 +9,5 @@ pub struct Credentials {
 pub struct CredentialsConfig {
     pub did: Option<String>,
     pub client_id: Option<String>,
-    pub client_secret: Option<String>,    
+    pub client_secret: Option<String>,
 }
