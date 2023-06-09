@@ -2,7 +2,7 @@ use std::ffi::CStr;
 
 use crate::{
     app_config,
-    config::{Extension, KeyPair},
+    config::{ExtensionsRead, ExtensionsWrite, KeyPair},
     nodex::errors::NodeXError,
 };
 
@@ -33,14 +33,14 @@ impl SecureKeyStore {
 
     fn write_external(
         &self,
-        extension: &Extension,
+        extension: &ExtensionsWrite,
         key_type: &SecureKeyStoreType,
         key_pair: &KeyPair,
     ) -> Result<(), NodeXError> {
         log::info!("Called: write_external (type: {:?})", key_type);
 
         unsafe {
-            let encoded_secret_key = hex::encode(&key_pair.secret_key);
+            let encoded_secret_key = hex::encode(&key_pair.private_key);
             let encoded_public_key = hex::encode(&key_pair.public_key);
             let secret_key = [encoded_secret_key.as_bytes(), b"\0"].concat();
             let public_key = [encoded_public_key.as_bytes(), b"\0"].concat();
@@ -142,7 +142,7 @@ impl SecureKeyStore {
 
     fn read_external(
         &self,
-        extension: &Extension,
+        extension: &ExtensionsRead,
         key_type: &SecureKeyStoreType,
     ) -> Result<Option<KeyPair>, NodeXError> {
         log::info!("Called: read_external (type: {:?})", key_type);
@@ -222,7 +222,7 @@ impl SecureKeyStore {
                 ),
             };
 
-            let secret_key = match CStr::from_ptr(secret_key_buffer_ptr).to_str() {
+            let private_key = match CStr::from_ptr(secret_key_buffer_ptr).to_str() {
                 Ok(v) => match hex::decode(v) {
                     Ok(v) => v,
                     _ => return Err(NodeXError {}),
@@ -240,7 +240,7 @@ impl SecureKeyStore {
             if result == 0 {
                 Ok(Some(KeyPair {
                     public_key,
-                    secret_key,
+                    private_key,
                 }))
             } else {
                 Err(NodeXError {})

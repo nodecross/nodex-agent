@@ -1,6 +1,6 @@
 use crate::{
     app_config,
-    config::Extension,
+    config::ExtensionsRead,
     nodex::{errors::NodeXError, runtime::random::Random},
 };
 use std::ffi::CStr;
@@ -14,7 +14,7 @@ impl Trng {
         Trng {}
     }
 
-    fn read_external(&self, extension: &Extension, size: &usize) -> Result<Vec<u8>, NodeXError> {
+    fn read_external(&self, extension: &ExtensionsRead, size: &usize) -> Result<Vec<u8>, NodeXError> {
         log::info!("Called: read_external");
 
         if Trng::MAX_BUFFER_LENGTH < *size {
@@ -61,13 +61,13 @@ impl Trng {
 
     pub fn read(&self, size: &usize) -> Result<Vec<u8>, NodeXError> {
         let config = app_config();
-        let extension = match config.inner.lock() {
+        let trng = match config.inner.lock() {
             Ok(config) => config.load_trng_read_sig(),
             _ => return Err(NodeXError {}),
         };
 
-        match extension {
-            Some(v) => self.read_external(&v, size),
+        match trng {
+            Some(v) => self.read_external(&v.read, size),
             _ => self.read_internal(size),
         }
     }
