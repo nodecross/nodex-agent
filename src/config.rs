@@ -410,6 +410,8 @@ impl AppConfig {
 pub struct ServerConfig {
     did_http_endpoint: String,
     did_attachment_link: String,
+    mqtt_host: String,
+    mqtt_port: u16,
 }
 
 impl Default for ServerConfig {
@@ -424,9 +426,13 @@ impl ServerConfig {
             env::var("NODEX_DID_HTTP_ENDPOINT").unwrap_or("https://did.nodecross.io".to_string());
         let link =
             env::var("NODEX_DID_ATTACHMENT_LINK").unwrap_or("https://did.getnodex.io".to_string());
+        let mqtt_host = env::var("NODEX_MQTT_HOST").unwrap_or("demo-mqtt.getnodex.io".to_string());
+        let mqtt_port = env::var("NODEX_MQTT_PORT").unwrap_or("1883".to_string());
         ServerConfig {
             did_http_endpoint: endpoint,
             did_attachment_link: link,
+            mqtt_host,
+            mqtt_port: mqtt_port.parse::<u16>().unwrap(),
         }
     }
     pub fn did_http_endpoint(&self) -> String {
@@ -434,5 +440,11 @@ impl ServerConfig {
     }
     pub fn did_attachment_link(&self) -> String {
         self.did_attachment_link.clone()
+    }
+    pub fn mqtt_host(&self) -> String {
+        self.mqtt_host.clone()
+    }
+    pub fn mqtt_port(&self) -> u16 {
+        self.mqtt_port
     }
 }

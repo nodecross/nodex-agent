@@ -88,6 +88,8 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
+    let server_config = server_config();
+
     let home_dir = match dirs::home_dir() {
         Some(v) => v,
         None => panic!(),
@@ -126,8 +128,8 @@ async fn main() -> std::io::Result<()> {
     let sock_path = runtime_dir.clone().join("nodex.sock");
 
     // NOTE: connect mqtt server
-    let mqtt_host = "demo-mqtt.getnodex.io";
-    let mqtt_port = 1883;
+    let mqtt_host = server_config.mqtt_host();
+    let mqtt_port = server_config.mqtt_port();
     let mqtt_client_id = cuid::cuid2();
 
     let did_id = did.did_document.id;
