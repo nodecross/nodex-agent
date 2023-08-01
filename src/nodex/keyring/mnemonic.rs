@@ -11,10 +11,12 @@ use crate::{
     SingletonAppConfig,
 };
 
+use bip32::Seed;
+
 use super::secp256k1::{Secp256k1, Secp256k1Context};
 
 pub struct MnemonicKeyring {
-    mnemonic: String,
+    // mnemonic: String,
     sign: Secp256k1,
     update: Secp256k1,
     recovery: Secp256k1,
@@ -33,11 +35,11 @@ impl MnemonicKeyring {
         let config = app_config();
         let secure_keystore = SecureKeyStore::new();
 
-        let mnemonic = config.inner.lock().unwrap().get_mnemonic();
-        let mnemonic = match mnemonic {
-            Some(v) => v,
-            None => return Err(NodeXError {}),
-        };
+        // let mnemonic = config.inner.lock().unwrap().get_mnemonic();
+        // let mnemonic = match mnemonic {
+        //     Some(v) => v,
+        //     None => return Err(NodeXError {}),
+        // };
 
         let sign = match secure_keystore.read(&SecureKeyStoreType::Sign) {
             Ok(Some(v)) => {
@@ -89,7 +91,7 @@ impl MnemonicKeyring {
         };
 
         Ok(MnemonicKeyring {
-            mnemonic,
+            // mnemonic,
             sign,
             update,
             recovery,
@@ -103,22 +105,24 @@ impl MnemonicKeyring {
         let config = app_config();
         let secure_keystore = SecureKeyStore::new();
 
-        let mnemonic = match runtime::bip39::BIP39::generate_mnemonic(
-            &runtime::bip39::MnemonicType::Words24,
-        ) {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("{:?}", e);
-                return Err(NodeXError {});
-            }
-        };
-        let seed = match runtime::bip39::BIP39::mnemonic_to_seed(&mnemonic, None) {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("{:?}", e);
-                return Err(NodeXError {});
-            }
-        };
+        // let mnemonic = match runtime::bip39::BIP39::generate_mnemonic(
+        //     &runtime::bip39::MnemonicType::Words24,
+        // ) {
+        //     Ok(v) => v,
+        //     Err(e) => {
+        //         log::error!("{:?}", e);
+        //         return Err(NodeXError {});
+        //     }
+        // };
+        // let seed = match runtime::bip39::BIP39::mnemonic_to_seed(&mnemonic, None) {
+        //     Ok(v) => v,
+        //     Err(e) => {
+        //         log::error!("{:?}", e);
+        //         return Err(NodeXError {});
+        //     }
+        // };
+
+        let seed = Seed::new([0u8; 64]).as_bytes().to_vec();
 
         let sign = match Self::generate_secp256k1(&seed, Self::SIGN_DERIVATION_PATH) {
             Ok(v) => v,
@@ -150,7 +154,7 @@ impl MnemonicKeyring {
         };
 
         Ok(MnemonicKeyring {
-            mnemonic,
+            // mnemonic,
             sign,
             update,
             recovery,
@@ -246,7 +250,7 @@ impl MnemonicKeyring {
 
         match self.config.inner.lock() {
             Ok(mut config) => {
-                config.save_mnemonic(&self.mnemonic);
+                // config.save_mnemonic(&self.mnemonic);
             }
             _ => panic!(),
         };
@@ -268,23 +272,23 @@ impl MnemonicKeyring {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn get_mnemonic_phrase(&self) -> Result<Vec<String>, NodeXError> {
-        Ok(self.mnemonic.split(' ').map(|v| v.to_string()).collect())
-    }
+    // #[allow(dead_code)]
+    // pub fn get_mnemonic_phrase(&self) -> Result<Vec<String>, NodeXError> {
+    //     Ok(self.mnemonic.split(' ').map(|v| v.to_string()).collect())
+    // }
 
-    #[allow(dead_code)]
-    pub fn verify_mnemonic_phrase(&self, phrase: &Vec<String>) -> Result<bool, NodeXError> {
-        let mnemonic = match self.get_mnemonic_phrase() {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("{:?}", e);
-                return Err(NodeXError {});
-            }
-        };
+    // #[allow(dead_code)]
+    // pub fn verify_mnemonic_phrase(&self, phrase: &Vec<String>) -> Result<bool, NodeXError> {
+    //     let mnemonic = match self.get_mnemonic_phrase() {
+    //         Ok(v) => v,
+    //         Err(e) => {
+    //             log::error!("{:?}", e);
+    //             return Err(NodeXError {});
+    //         }
+    //     };
 
-        Ok(mnemonic.cmp(phrase) == Ordering::Equal)
-    }
+    //     Ok(mnemonic.cmp(phrase) == Ordering::Equal)
+    // }
 }
 
 #[cfg(test)]
@@ -304,38 +308,38 @@ pub mod tests {
         assert_eq!(keyring.get_encrypt_key_pair().get_secret_key().len(), 32);
     }
 
-    #[test]
-    pub fn test_get_mnemonic_phrase() {
-        let keyring = match MnemonicKeyring::create_keyring() {
-            Ok(v) => v,
-            Err(_) => panic!(),
-        };
+    // #[test]
+    // pub fn test_get_mnemonic_phrase() {
+    //     let keyring = match MnemonicKeyring::create_keyring() {
+    //         Ok(v) => v,
+    //         Err(_) => panic!(),
+    //     };
 
-        let result = match keyring.get_mnemonic_phrase() {
-            Ok(v) => v,
-            Err(_) => panic!(),
-        };
+    //     let result = match keyring.get_mnemonic_phrase() {
+    //         Ok(v) => v,
+    //         Err(_) => panic!(),
+    //     };
 
-        assert_eq!(result.len(), 24)
-    }
+    //     assert_eq!(result.len(), 24)
+    // }
 
-    #[test]
-    pub fn test_verify_mnemonic_phrase() {
-        let keyring = match MnemonicKeyring::create_keyring() {
-            Ok(v) => v,
-            Err(_) => panic!(),
-        };
+    // #[test]
+    // pub fn test_verify_mnemonic_phrase() {
+    //     let keyring = match MnemonicKeyring::create_keyring() {
+    //         Ok(v) => v,
+    //         Err(_) => panic!(),
+    //     };
 
-        let mnemonic = match keyring.get_mnemonic_phrase() {
-            Ok(v) => v,
-            Err(_) => panic!(),
-        };
+    //     let mnemonic = match keyring.get_mnemonic_phrase() {
+    //         Ok(v) => v,
+    //         Err(_) => panic!(),
+    //     };
 
-        let result = match keyring.verify_mnemonic_phrase(&mnemonic) {
-            Ok(v) => v,
-            Err(_) => panic!(),
-        };
+    //     let result = match keyring.verify_mnemonic_phrase(&mnemonic) {
+    //         Ok(v) => v,
+    //         Err(_) => panic!(),
+    //     };
 
-        assert!(result)
-    }
+    //     assert!(result)
+    // }
 }
