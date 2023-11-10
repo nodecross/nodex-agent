@@ -1,3 +1,11 @@
+use crate::nodex::schema::general::GeneralVcDataModel;
+use crate::services::nodex::NodeX;
+use crate::{
+    network::Network,
+    nodex::errors::NodeXError,
+    server,
+    services::{hub::Hub, internal::didcomm_encrypted::DIDCommEncryptedService},
+};
 use actix::prelude::*;
 use actix::{Actor, ActorContext, StreamHandler};
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -7,14 +15,6 @@ use std::{
     collections::HashSet,
     sync::{atomic::AtomicBool, Arc, RwLock},
     time::Duration,
-};
-
-use crate::services::nodex::NodeX;
-use crate::{
-    network::Network,
-    nodex::errors::NodeXError,
-    server,
-    services::{hub::Hub, internal::didcomm_encrypted::DIDCommEncryptedService},
 };
 
 #[derive(Deserialize)]
@@ -67,9 +67,8 @@ impl MessageReceiveActor {
 #[derive(Deserialize, Serialize, Debug, Clone, Message)]
 #[rtype(result = "Result<(), ()>")]
 struct ResponseJson {
-    pub message_from: String,
     pub message_id: String,
-    pub payload: serde_json::Value,
+    pub message: GeneralVcDataModel,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -100,7 +99,7 @@ impl MessageReceiveUsecase {
     }
 
     pub async fn receive_message(&self) -> Result<Vec<ResponseJson>, NodeXError> {
-        let mut response = Vec::new();
+        let mut responses = Vec::new();
 
         for m in self.hub.get_message(&self.project_did).await? {
             let json_message = serde_json::from_str(&m.raw_message).map_err(|e| {
@@ -109,16 +108,16 @@ impl MessageReceiveUsecase {
             })?;
             match DIDCommEncryptedService::verify(&json_message).await {
                 Ok(verified) => {
-                    let message = ResponseJson {
-                        message_from: verified.message.issuer.id,
+                    let response = ResponseJson {
                         message_id: m.id,
-                        payload: verified.message.credential_subject.container,
+                        message: verified.message.clone(),
                     };
-                    if message.message_from == self.project_did {
-                        let operation_type = message.payload["operation"].clone();
+                    if verified.message.issuer.id == self.project_did {
+                        let container = verified.message.credential_subject.container;
+                        let operation_type = container["operation"].clone();
                         match serde_json::from_value::<OperationType>(operation_type) {
                             Ok(OperationType::UpdateAgent) => {
-                                let binary_url = match message.payload["binary_url"].as_str() {
+                                let binary_url = match container["binary_url"].as_str() {
                                     Some(url) => url,
                                     None => return Err(NodeXError {}),
                                 };
@@ -126,13 +125,13 @@ impl MessageReceiveUsecase {
                                     .update_version(binary_url, "/tmp/nodex-agent")
                                     .await?;
                                 self.hub
-                                    .ack_message(&self.project_did, message.message_id, true)
+                                    .ack_message(&self.project_did, response.message_id, true)
                                     .await?;
                             }
                             Ok(OperationType::UpdateNetworkJson) => {
                                 self.hub.network().await?;
                                 self.hub
-                                    .ack_message(&self.project_did, message.message_id, true)
+                                    .ack_message(&self.project_did, response.message_id, true)
                                     .await?;
                             }
                             Err(e) => {
@@ -141,7 +140,7 @@ impl MessageReceiveUsecase {
                         }
                         continue;
                     }
-                    response.push(message);
+                    responses.push(response);
                 }
                 Err(_) => {
                     log::error!("Verify failed");
@@ -151,7 +150,7 @@ impl MessageReceiveUsecase {
             }
         }
 
-        Ok(response)
+        Ok(responses)
     }
 
     async fn ack_message(&self, message_id: String) {

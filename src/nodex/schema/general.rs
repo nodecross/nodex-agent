@@ -3,13 +3,13 @@ use serde_json::Value;
 
 use crate::nodex::cipher::credential_signer::Proof;
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct Issuer {
     #[serde(rename = "id")]
     pub id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct CredentialSubject {
     // NOTE: 'id' property is optional.
     #[serde(rename = "id", skip_serializing_if = "Option::is_none")]
@@ -19,7 +19,7 @@ pub struct CredentialSubject {
     pub container: Value,
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct GeneralVcDataModel {
     // NOTE: 'id' property is optional.
     #[serde(rename = "id", skip_serializing_if = "Option::is_none")]
