@@ -66,14 +66,14 @@ impl NodeX {
                 return Err(NodeXError {});
             }
         };
-        let update = match keyring.get_recovery_key_pair().to_jwk(false) {
+        let update = match keyring.get_update_key_pair().to_jwk(false) {
             Ok(v) => v,
             Err(e) => {
                 log::error!("{:?}", e);
                 return Err(NodeXError {});
             }
         };
-        let recovery = match keyring.get_update_key_pair().to_jwk(false) {
+        let recovery = match keyring.get_recovery_key_pair().to_jwk(false) {
             Ok(v) => v,
             Err(e) => {
                 log::error!("{:?}", e);
