@@ -486,9 +486,7 @@ impl Default for ProxyConfig {
 impl ProxyConfig {
     pub fn new() -> ProxyConfig {
         let proxy_endpoint = env::var("NODEX_PROXY_ENDPOINT").unwrap_or("".to_string());
-        ProxyConfig {
-            proxy_endpoint: proxy_endpoint,
-        }
+        ProxyConfig { proxy_endpoint }
     }
     pub fn proxy_endpoint(&self) -> String {
         self.proxy_endpoint.clone()
