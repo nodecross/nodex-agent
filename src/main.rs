@@ -1,6 +1,7 @@
 extern crate env_logger;
 
 use clap::{Parser, Subcommand};
+use config::ProxyConfig;
 use controllers::public::nodex_receive::ConnectionRepository;
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use services::hub::Hub;
@@ -81,6 +82,10 @@ pub fn network_config() -> Box<SingletonNetworkConfig> {
 
 pub fn server_config() -> ServerConfig {
     ServerConfig::new()
+}
+
+pub fn proxy_config() -> ProxyConfig {
+    ProxyConfig::new()
 }
 
 #[derive(Parser, Debug)]

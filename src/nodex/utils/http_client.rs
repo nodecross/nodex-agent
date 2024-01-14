@@ -1,11 +1,12 @@
 use crate::nodex::errors::NodeXError;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
-    Url,
+    Proxy, Url,
 };
 
 pub struct HttpClientConfig {
     pub base_url: String,
+    pub proxy: String,
 }
 
 #[derive(Clone, Debug)]
@@ -23,7 +24,7 @@ impl HttpClient {
                 return Err(NodeXError {});
             }
         };
-        let client: reqwest::Client = reqwest::Client::new();
+        let client = Self::build_client(&_config.proxy);
 
         Ok(HttpClient {
             instance: client,
@@ -38,6 +39,16 @@ impl HttpClient {
             HeaderValue::from_static("application/json"),
         );
         headers
+    }
+
+    fn build_client(proxy: &String) -> reqwest::Client {
+        if proxy.is_empty() {
+            return reqwest::Client::new();
+        }
+        reqwest::Client::builder()
+            .proxy(Proxy::all(proxy).unwrap())
+            .build()
+            .unwrap()
     }
 
     pub async fn get(&self, _path: &str) -> Result<reqwest::Response, NodeXError> {
@@ -131,6 +142,7 @@ pub mod tests {
     async fn it_should_success_get() {
         let client_config: HttpClientConfig = HttpClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HttpClient::new(&client_config) {
@@ -156,6 +168,7 @@ pub mod tests {
     async fn it_should_success_post() {
         let client_config: HttpClientConfig = HttpClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HttpClient::new(&client_config) {
@@ -181,6 +194,7 @@ pub mod tests {
     async fn it_should_success_put() {
         let client_config: HttpClientConfig = HttpClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HttpClient::new(&client_config) {
@@ -206,6 +220,7 @@ pub mod tests {
     async fn it_should_success_delete() {
         let client_config: HttpClientConfig = HttpClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HttpClient::new(&client_config) {

@@ -471,3 +471,26 @@ impl ServerConfig {
         self.hub_http_endpoint.clone()
     }
 }
+
+#[derive(Debug)]
+pub struct ProxyConfig {
+    proxy_endpoint: String,
+}
+
+impl Default for ProxyConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ProxyConfig {
+    pub fn new() -> ProxyConfig {
+        let proxy_endpoint = env::var("NODEX_PROXY_ENDPOINT").unwrap_or("".to_string());
+        ProxyConfig {
+            proxy_endpoint: proxy_endpoint,
+        }
+    }
+    pub fn proxy_endpoint(&self) -> String {
+        self.proxy_endpoint.clone()
+    }
+}

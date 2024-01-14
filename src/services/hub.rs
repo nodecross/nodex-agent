@@ -3,7 +3,7 @@ use crate::nodex::{
     errors::NodeXError,
     utils::hub_client::{HubClient, HubClientConfig},
 };
-use crate::server_config;
+use crate::{proxy_config, server_config};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -51,8 +51,10 @@ pub struct NetworkResponse {
 impl Hub {
     pub fn new() -> Self {
         let server_config = server_config();
+        let proxy_config = proxy_config();
         let client_config: HubClientConfig = HubClientConfig {
             base_url: server_config.hub_http_endpoint(),
+            proxy: proxy_config.proxy_endpoint(),
         };
 
         let client = match HubClient::new(&client_config) {

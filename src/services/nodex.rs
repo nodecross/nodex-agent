@@ -7,7 +7,7 @@ use crate::nodex::{
     },
     utils::http_client::{HttpClient, HttpClientConfig},
 };
-use crate::server_config;
+use crate::{proxy_config, server_config};
 use serde_json::{json, Value};
 use std::{fs, process::Command};
 
@@ -18,8 +18,10 @@ pub struct NodeX {
 impl NodeX {
     pub fn new() -> Self {
         let server_config = server_config();
+        let proxy_config = proxy_config();
         let client_config: HttpClientConfig = HttpClientConfig {
             base_url: server_config.did_http_endpoint(),
+            proxy: proxy_config.proxy_endpoint(),
         };
 
         let client = match HttpClient::new(&client_config) {

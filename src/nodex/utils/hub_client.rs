@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};
 use reqwest::{
     header::{HeaderMap, HeaderValue},
-    Url,
+    Proxy, Url,
 };
 use sha2::Sha256;
 
@@ -15,6 +15,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 pub struct HubClientConfig {
     pub base_url: String,
+    pub proxy: String,
 }
 
 #[derive(Clone, Debug)]
@@ -32,12 +33,24 @@ impl HubClient {
                 return Err(NodeXError {});
             }
         };
-        let client: reqwest::Client = reqwest::Client::new();
+
+        let client = Self::build_client(&_config.proxy);
 
         Ok(HubClient {
             instance: client,
             base_url: url,
         })
+    }
+
+    fn build_client(proxy: &String) -> reqwest::Client {
+        if proxy.is_empty() {
+            return reqwest::Client::new();
+        }
+        reqwest::Client::builder()
+            .proxy(Proxy::all(proxy).unwrap())
+            .user_agent("NodeX Agent")
+            .build()
+            .unwrap()
     }
 
     fn auth_headers(&self, payload: String) -> Result<HeaderMap, NodeXError> {
@@ -291,6 +304,7 @@ pub mod tests {
     async fn it_should_success_get() {
         let client_config: HubClientConfig = HubClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HubClient::new(&client_config) {
@@ -316,6 +330,7 @@ pub mod tests {
     async fn it_should_success_post() {
         let client_config: HubClientConfig = HubClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HubClient::new(&client_config) {
@@ -341,6 +356,7 @@ pub mod tests {
     async fn it_should_success_put() {
         let client_config: HubClientConfig = HubClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HubClient::new(&client_config) {
@@ -366,6 +382,7 @@ pub mod tests {
     async fn it_should_success_delete() {
         let client_config: HubClientConfig = HubClientConfig {
             base_url: "https://httpbin.org".to_string(),
+            proxy: "".to_string(),
         };
 
         let client = match HubClient::new(&client_config) {
