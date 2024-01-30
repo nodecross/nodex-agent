@@ -159,7 +159,18 @@ impl NodeX {
         Ok(container)
     }
 
-    pub async fn update_version(&self, binary_url: &str, path: &str) -> Result<(), NodeXError> {
+    pub async fn update_version(
+        &self,
+        binary_url: &str,
+        output_path: &str,
+    ) -> Result<(), NodeXError> {
+        let output_path = if output_path.ends_with("/") {
+            output_path.trim_end()
+        } else {
+            output_path
+        };
+        let agent_path = format!("{}/nodex-agent", output_path);
+
         let response = reqwest::get(binary_url).await;
         match response {
             Ok(r) => {
@@ -167,15 +178,25 @@ impl NodeX {
                     Ok(c) => c,
                     Err(_) => return Err(NodeXError {}),
                 };
-                match fs::write(path, &content) {
+                match fs::write(format!("{}.zip", agent_path), &content) {
                     Ok(_) => (),
                     Err(_) => return Err(NodeXError {}),
                 };
-                match Command::new("chmod").arg("+x").arg(path).status() {
+                match Command::new("unzip")
+                    .arg("-o")
+                    .arg(format!("{}.zip", agent_path))
+                    .arg("-d")
+                    .arg(output_path)
+                    .status()
+                {
                     Ok(_) => (),
                     Err(_) => return Err(NodeXError {}),
                 };
-                match Command::new(path).spawn() {
+                match Command::new("chmod").arg("+x").arg(&agent_path).status() {
+                    Ok(_) => (),
+                    Err(_) => return Err(NodeXError {}),
+                };
+                match Command::new(&agent_path).spawn() {
                     Ok(_) => (),
                     Err(_) => return Err(NodeXError {}),
                 };

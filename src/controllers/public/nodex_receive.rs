@@ -127,9 +127,7 @@ impl MessageReceiveUsecase {
                                     Some(url) => url,
                                     None => return Err(NodeXError {}),
                                 };
-                                self.agent
-                                    .update_version(binary_url, "/tmp/nodex-agent")
-                                    .await?;
+                                self.agent.update_version(binary_url, "/tmp").await?;
                                 self.hub
                                     .ack_message(&self.project_did, response.message_id, true)
                                     .await?;
