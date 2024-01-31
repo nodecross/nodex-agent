@@ -9,7 +9,8 @@ use crate::nodex::{
 };
 use crate::server_config;
 use serde_json::{json, Value};
-use std::{fs, process::Command};
+use std::{fs, io::Cursor, path::PathBuf, process::Command};
+use zip_extract;
 
 pub struct NodeX {
     http_client: HttpClient,
@@ -164,7 +165,12 @@ impl NodeX {
         binary_url: &str,
         output_path: &str,
     ) -> Result<(), NodeXError> {
-        let output_path = if output_path.ends_with("/") {
+        if !binary_url.starts_with("https://github.com/nodecross/nodex/releases/download/") {
+            log::error!("{:?}", "Invalid url");
+            return Err(NodeXError {});
+        }
+
+        let output_path = if output_path.ends_with('/') {
             output_path.trim_end()
         } else {
             output_path
@@ -178,20 +184,19 @@ impl NodeX {
                     Ok(c) => c,
                     Err(_) => return Err(NodeXError {}),
                 };
-                match fs::write(format!("{}.zip", agent_path), &content) {
+
+                if PathBuf::from(&agent_path).exists() {
+                    fs::remove_file(&agent_path).expect("File delete failed");
+                }
+                let target_dir = PathBuf::from(output_path);
+                match zip_extract::extract(Cursor::new(content), &target_dir, true) {
                     Ok(_) => (),
-                    Err(_) => return Err(NodeXError {}),
+                    Err(e) => {
+                        log::error!("{:?}", e);
+                        return Err(NodeXError {});
+                    }
                 };
-                match Command::new("unzip")
-                    .arg("-o")
-                    .arg(format!("{}.zip", agent_path))
-                    .arg("-d")
-                    .arg(output_path)
-                    .status()
-                {
-                    Ok(_) => (),
-                    Err(_) => return Err(NodeXError {}),
-                };
+
                 match Command::new("chmod").arg("+x").arg(&agent_path).status() {
                     Ok(_) => (),
                     Err(_) => return Err(NodeXError {}),
