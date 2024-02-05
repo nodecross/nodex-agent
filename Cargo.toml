@@ -1,6 +1,6 @@
 [package]
 name = "nodex"
-version = "1.2.3"
+version = "1.2.4"
 authors = ["NodeX Authors <>"]
 edition = "2018"
 license-file = "LICENSE"
