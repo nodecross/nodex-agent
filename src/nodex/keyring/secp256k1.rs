@@ -28,18 +28,20 @@ pub struct KeyPairSecp256K1 {
     pub kid: Option<String>,
 }
 
+#[derive(Clone, Debug)]
 pub struct Secp256k1Context {
     pub public: Vec<u8>,
     pub secret: Vec<u8>,
 }
 
 #[allow(dead_code)]
+#[derive(Clone, Debug)]
 pub struct Secp256k1HexKeyPair {
     public: String,
     private: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Secp256k1 {
     public: Vec<u8>,
     private: Vec<u8>,

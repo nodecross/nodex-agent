@@ -39,7 +39,6 @@ impl Secp256k1 {
         Ok(signing_key.verifying_key().to_bytes().to_vec())
     }
 
-    #[allow(dead_code)]
     pub fn convert_public_key(
         public_key: &[u8],
         compress: bool,
@@ -48,7 +47,6 @@ impl Secp256k1 {
         Ok(public_key.to_encoded_point(compress).as_bytes().to_vec())
     }
 
-    #[allow(dead_code)]
     pub fn ecdsa_sign(message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, Secp256k1Error> {
         let signing_key = SigningKey::from_bytes(private_key.to_vec().as_slice())?;
 
@@ -57,7 +55,6 @@ impl Secp256k1 {
         Ok(signature.as_ref().to_vec())
     }
 
-    #[allow(dead_code)]
     pub fn ecdsa_verify(
         signature: &[u8],
         message: &[u8],
