@@ -82,9 +82,11 @@ impl VerifiableMessageUseCase {
     pub async fn verify(&self, message: &str) -> anyhow::Result<String> {
         let message = serde_json::from_str::<Value>(message)?;
 
+        println!("message: {:?}", message);
         let vc = DIDVCService::verify(&message)
             .await
             .context("verify failed")?;
+        println!("vc: {:?}", vc);
 
         let container = vc
             .get("credentialSubject")

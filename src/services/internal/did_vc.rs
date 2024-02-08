@@ -59,9 +59,10 @@ impl DIDVCService {
         anyhow::ensure!(public_keys.len() == 1, "public_keys length must be 1");
 
         let public_key = public_keys[0].clone();
+        dbg!(&public_key);
 
         let context = keyring::secp256k1::Secp256k1::from_jwk(&public_key.public_key_jwk)?;
-        log::info!("context: {:?}", &context);
+        dbg!(&context);
 
         let (verified_model, verified) = CredentialSigner::verify(
             &model,
