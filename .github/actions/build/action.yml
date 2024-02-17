@@ -35,7 +35,7 @@ runs:
         dest: nodex-agent-${{ inputs.target }}.zip
 
     - name: (run) upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.target }}
         path: nodex-agent-${{ inputs.target }}.zip
