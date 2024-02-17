@@ -26,12 +26,12 @@ runs:
 
     - name: (run) build
       shell: bash
-      run: cargo build --release
+      run: cargo build --release --target ${{ inputs.target }}
 
     - name: (run) create artifact
       uses: vimtor/action-zip@v1.1
       with:
-        files: target/release/nodex-agent
+        files: target/${{ inputs.target }}/release/nodex-agent
         dest: nodex-agent-${{ inputs.target }}.zip
 
     - name: (run) upload artifact

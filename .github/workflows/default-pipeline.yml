@@ -79,12 +79,15 @@ jobs:
     needs: [build-macos, build-linux]
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ${{ github.workspace }}
-          pattern: "*"
-          merge-multiple: true
+          name: x86_64-unknown-linux-gnu
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: x86_64-apple-darwin
 
       - name: Check downloaded artifacts
         run: |
