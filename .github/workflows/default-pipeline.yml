@@ -73,3 +73,19 @@ jobs:
           target: ${{ matrix.target }}
           use-cache: true
           github-token: ${{ env.GITHUB_TOKEN }}
+
+  debug-release:
+    name: Release (debug)
+    needs: [build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}
+          pattern: "*"
+          merge-multiple: true
+
+      - name: Check downloaded artifacts
+        run: |
+          ls -la ${{ github.workspace }}
