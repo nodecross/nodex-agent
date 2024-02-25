@@ -130,9 +130,10 @@ impl HubClient {
         &self,
         path: &str,
         to_did: &str,
-        message: serde_json::Value,
+        message: &serde_json::Value,
+        metadata: Option<&serde_json::Value>,
     ) -> anyhow::Result<reqwest::Response> {
-        let payload = DIDCommEncryptedService::generate(to_did, &message, None)
+        let payload = DIDCommEncryptedService::generate(to_did, message, metadata)
             .await?
             .to_string();
         let url = self.base_url.join(path);

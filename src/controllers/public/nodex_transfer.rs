@@ -8,7 +8,7 @@ use serde_json::Value;
 pub struct RequestContainer {
     destinations: Vec<String>,
     messages: Vec<Value>,
-    metadata: Value,
+    metadata: Option<Value>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -40,7 +40,11 @@ pub async fn handler(
 
     // FIXME Implement both HTTP and MQTT transfer
     match Hub::new()
-        .send_message(to_did, serde_json::json!(json.messages))
+        .send_message(
+            to_did,
+            &serde_json::json!(json.messages),
+            json.metadata.as_ref(),
+        )
         .await
     {
         Ok(_) => Ok(HttpResponse::Ok().json(&ResponseContainer {

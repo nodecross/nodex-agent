@@ -160,11 +160,12 @@ impl Hub {
     pub async fn send_message(
         &self,
         to_did: &str,
-        message: serde_json::Value,
+        message: &serde_json::Value,
+        metadata: Option<&serde_json::Value>,
     ) -> anyhow::Result<()> {
         let res = self
             .http_client
-            .send_message("/v1/message", to_did, message)
+            .send_message("/v1/message", to_did, message, metadata)
             .await?;
         let status = res.status();
         match status {

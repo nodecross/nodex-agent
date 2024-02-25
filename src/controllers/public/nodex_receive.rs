@@ -10,6 +10,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::{
     collections::HashSet,
     sync::{atomic::AtomicBool, Arc, RwLock},
@@ -68,6 +69,7 @@ impl MessageReceiveActor {
 struct ResponseJson {
     pub message_id: String,
     pub message: GeneralVcDataModel,
+    pub metadata: Option<Value>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -115,6 +117,7 @@ impl MessageReceiveUsecase {
                     );
                     let response = ResponseJson {
                         message_id: m.id,
+                        metadata: verified.metadata.clone(),
                         message: verified.message.clone(),
                     };
                     if verified.message.issuer.id == self.project_did {

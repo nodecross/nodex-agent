@@ -6,9 +6,8 @@ import socket, { base } from "./socket";
  * Receive and handle the freeable memory message from other DID device from the NodeX Agent API.
  */
 export async function receive(data: RawData) {
-  const { credentialSubject, message_id, issuer } = JSON.parse(
-    data.toString()
-  ).message;
+  const { message_id, message, metadata } = JSON.parse(data.toString());
+  const { credentialSubject, issuer } = message;
   const response = {
     message_id,
   };
@@ -17,6 +16,9 @@ export async function receive(data: RawData) {
     `[${new Date().toISOString()}] Received: from device did: ${
       issuer.id
     } with ${credentialSubject?.container?.[0].free} freeable memory `
+  );
+  console.log(
+    `[${new Date().toISOString()}] metadata: ${JSON.stringify(metadata)} `
   );
 
   socket.send(JSON.stringify(response));
@@ -35,7 +37,9 @@ export async function send(did: string, free: number): Promise<any> {
         free,
       },
     ],
-    metadata: {},
+    metadata: {
+      type: "freeable-memory",
+    },
   };
 
   return await got
