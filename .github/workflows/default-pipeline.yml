@@ -14,6 +14,7 @@ permissions:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: (checkout) source code
@@ -27,6 +28,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: (checkout) source code
@@ -40,6 +42,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
+    timeout-minutes: 5
     strategy:
       matrix:
         target: [x86_64-apple-darwin]
@@ -58,6 +61,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     strategy:
       matrix:
         target: [x86_64-unknown-linux-gnu]
@@ -76,6 +80,7 @@ jobs:
 
   e2e-macos:
     needs: build-macos
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -126,6 +131,7 @@ jobs:
   e2e-linux:
     needs: build-linux
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
