@@ -63,8 +63,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:
+      fail-fast: false
       matrix:
-        target: [x86_64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
     name: Build / Linux / ${{ matrix.target }}
 
     steps:
@@ -86,7 +87,7 @@ jobs:
       matrix:
         target: [x86_64-apple-darwin]
         runner: [macos-13, macos-12]
-    name: E2E / MacOS / ${{ matrix.runner }}
+    name: E2E / MacOS / ${{ matrix.runner }} / ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -134,7 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
         docker-image:
           [
             ubuntu-2004,
@@ -144,7 +145,7 @@ jobs:
             debian-bullseye,
             debian-buster,
           ]
-    name: E2E / Linux / ${{ matrix.docker-image }}
+    name: E2E / Linux / ${{ matrix.docker-image }} / ${{ matrix.target }}
 
     steps:
       - name: (checkout) source code
@@ -171,3 +172,4 @@ jobs:
         with:
           binary-path: ./nodex-agent
           docker-image: ${{ matrix.docker-image }}
+          target: ${{ matrix.target }}

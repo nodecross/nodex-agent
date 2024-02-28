@@ -7,6 +7,9 @@ inputs:
   docker-image:
     required: true
     description: "the name of docker compose override files. check the file in test_resource/overrides/ for the available options"
+  target:
+    required: true
+    description: "the target platform for the binary"
 runs:
   using: composite
   steps:
@@ -14,19 +17,30 @@ runs:
       shell: bash
       run: cp ${{ inputs.binary-path }} ./test_resource/
 
+    - name: (setup) check architecture and set docker-compose file
+      shell: bash
+      id: set-compose-file
+      run: |
+        if [[ ${{ inputs.target }} == "aarch64-unknown-linux-gnu" ]]; then
+          COMPOSE_FILE=test_resource/compose.yaml:test_resource/overrides/${{ inputs.docker-image }}.yaml:test_resource/overrides/arm64.yaml
+        else
+          COMPOSE_FILE=test_resource/compose.yaml:test_resource/overrides/${{ inputs.docker-image }}.yaml
+        fi
+        echo "COMPOSE_FILE::$COMPOSE_FILE" >> $GITHUB_ENV
+
     - name: (setup) pull docker images
       shell: bash
-      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml pull -q
+      run: COMPOSE_FILE=$COMPOSE_FILE docker compose pull -q
 
     - name: (run) run mock server
       shell: bash
-      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e up -d
+      run: COMPOSE_FILE=$COMPOSE_FILE docker compose --profile e2e up -d
 
     - name: (run) e2e tests
       shell: bash
-      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e run e2e_runner cargo test
+      run: COMPOSE_FILE=$COMPOSE_FILE docker compose --profile e2e run e2e_runner cargo test
 
     - name: (run) show log of agent
       shell: bash
-      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e logs e2e_agent
+      run: COMPOSE_FILE=$COMPOSE_FILE docker compose --profile e2e logs e2e_agent
       if: ${{ always() }}

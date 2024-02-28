@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
     name: Build / Linux / ${{ matrix.target }}
     steps:
       - name: (checkout) source code
@@ -114,7 +114,16 @@ jobs:
         with:
           release_id: ${{ steps.release.outputs.result }}
           asset_path: ${{ github.workspace }}/nodex-agent-x86_64-unknown-linux-gnu.zip
-          asset_name: nodex-agent-x86_64.zip
+          asset_name: nodex-agent-x86_64-unknown-linux-gnu.zip
+          asset_content_type: application/zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload asset (linux)
+        uses: ./.github/actions/upload-release-asset
+        with:
+          release_id: ${{ steps.release.outputs.result }}
+          asset_path: ${{ github.workspace }}/nodex-agent-aarch64-unknown-linux-gnu.zip
+          asset_name: nodex-agent-aarch64-unknown-linux-gnu.zip
           asset_content_type: application/zip
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -123,7 +132,7 @@ jobs:
         with:
           release_id: ${{ steps.release.outputs.result }}
           asset_path: ${{ github.workspace }}/nodex-agent-x86_64-apple-darwin.zip
-          asset_name: nodex-agent-mac.zip
+          asset_name: nodex-agent-x86_64-apple-darwin.zip
           asset_content_type: application/zip
           github_token: ${{ secrets.GITHUB_TOKEN }}
 

@@ -31,10 +31,10 @@ for aarch64
 ```shell
 cp target/aarch64-unknown-linux-gnu/release/nodex-agent test_resource/
 
-docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm.yaml --profile e2e up -d
+docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm64.yaml --profile e2e up -d
 
-docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm.yaml --profile e2e run e2e_runner cargo test
+docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm64.yaml --profile e2e run e2e_runner cargo test
 
 # check logs of agent
-docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm.yaml --profile e2e logs e2e_agent
+docker compose -f test_resource/compose.yaml -f test_resource/overrides/arm64.yaml --profile e2e logs e2e_agent
 ```
