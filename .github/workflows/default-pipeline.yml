@@ -65,7 +65,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            arch: linux/amd64
+          - target: aarch64-unknown-linux-gnu
+            arch: linux/arm64
     name: Build / Linux / ${{ matrix.target }}
 
     steps:
@@ -76,6 +80,7 @@ jobs:
         uses: ./.github/actions/build-with-cross
         with:
           target: ${{ matrix.target }}
+          platform: ${{ matrix.arch }}
           use-cache: true
           github-token: ${{ env.GITHUB_TOKEN }}
 
