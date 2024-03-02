@@ -92,7 +92,7 @@ jobs:
         working-directory: examples/nodejs
         run: |
           mv app/README.md .
-          zip -r example.zip app/ README.md package.json tsconfig.json yarn.lock ../../LICENSE
+          zip -r example.zip app/ cli/ README.md package.json tsconfig.json yarn.lock ../../LICENSE
 
       - name: Create Release
         uses: actions/github-script@v5
