@@ -1,0 +1,14 @@
+[Unit]
+Description=The NodeX Agent
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/sysconfig/nodex.env
+ExecStart=/usr/sbin/nodex-agent
+PrivateTmp=true
+Restart=yes
+
+[Install]
+WantedBy=multi-user.target

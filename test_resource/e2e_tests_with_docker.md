@@ -10,6 +10,8 @@ CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target x86
 
 # aarch64
 cross build --release --target aarch64-unknown-linux-gnu
+# or
+CROSS_CONTAINER_OPTS="--platform linux/amd64" cross build --release --target aarch64-unknown-linux-gnu
 ```
 
 ## Run E2E test
@@ -28,6 +30,7 @@ docker compose -f test_resource/compose.yaml --profile e2e logs e2e_agent
 ```
 
 for aarch64
+
 ```shell
 cp target/aarch64-unknown-linux-gnu/release/nodex-agent test_resource/
 

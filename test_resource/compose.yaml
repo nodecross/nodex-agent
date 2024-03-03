@@ -4,6 +4,7 @@ services:
   sidetree_prism:
     image: stoplight/prism:4
     command: 'mock -h 0.0.0.0 /tmp/api.yaml'
+    platform: linux/amd64
     volumes:
       - ./did_sidetree.yaml:/tmp/api.yaml:ro
     ports:
@@ -19,6 +20,7 @@ services:
   studio_prism:
     image: stoplight/prism:4
     command: 'mock -h 0.0.0.0 /tmp/api.yaml'
+    platform: linux/amd64
     volumes:
       - ./studio.yaml:/tmp/api.yaml:ro
     ports:
@@ -30,6 +32,22 @@ services:
       timeout: 30s
       retries: 5
       start_period: 10s
+
+  systemd_test:
+    depends_on:
+      sidetree_prism:
+        condition: service_healthy
+      studio_prism:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: systemd/Dockerfile
+    privileged: true
+    profiles:
+      - systemd
+    volumes:
+      - ./config:/root/.config/nodex/
+      - agent_socket:/root/.nodex/
 
   e2e_agent:
     depends_on:

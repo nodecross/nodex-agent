@@ -28,7 +28,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: (checkout) source code
@@ -42,7 +42,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       matrix:
         target: [x86_64-apple-darwin]
@@ -61,7 +61,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
