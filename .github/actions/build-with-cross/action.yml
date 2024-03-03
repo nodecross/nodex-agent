@@ -4,9 +4,6 @@ inputs:
   target:
     required: true
     description: ""
-  platform:
-    required: true
-    description: ""
   use-cache:
     required: true
     description: ""
@@ -35,8 +32,6 @@ runs:
     - name: (run) build
       shell: bash
       run: cross build --target ${{ inputs.target }} --release
-      env:
-        CROSS_CONTAINER_OPTS: "--platform ${{ inputs.platform }}"
 
     - name: (run) create artifact
       uses: vimtor/action-zip@v1.1
