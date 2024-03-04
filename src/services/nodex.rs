@@ -64,6 +64,9 @@ impl NodeX {
             }
         }
 
+        log::error!("update start!!!");
+        panic!();
+
         // NOTE: does not exists did key ring
         let mut keyring = keyring::keypair::KeyPairing::create_keyring()?;
 

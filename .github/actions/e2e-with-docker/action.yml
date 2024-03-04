@@ -26,7 +26,7 @@ runs:
         else
           COMPOSE_FILE=test_resource/compose.yaml:test_resource/overrides/${{ inputs.docker-image }}.yaml
         fi
-        echo "COMPOSE_FILE::$COMPOSE_FILE" >> $GITHUB_ENV
+        echo "COMPOSE_FILE=$COMPOSE_FILE" >> $GITHUB_ENV
 
     - name: (setup) pull docker images
       shell: bash
