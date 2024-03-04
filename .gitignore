@@ -13,3 +13,4 @@ latex/
 .VERSION
 .env
 nodex-agent
+__pycache__
