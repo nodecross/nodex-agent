@@ -8,7 +8,7 @@ import traceback
 session = requests_unixsocket.Session()
 
 # Construct the base URL using the Unix socket path
-base = f"http+unix://{urllib.parse.quote(os.path.join(os.path.expanduser("~"), ".nodex/run/nodex.sock"), safe="")}"
+base = f'http+unix://{urllib.parse.quote(os.path.join(os.path.expanduser("~"), ".nodex/run/nodex.sock"), safe="")}'
 
 def call(method, path, payload):
     url = f"{base}:{path}"
