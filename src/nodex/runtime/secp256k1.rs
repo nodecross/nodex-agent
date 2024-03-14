@@ -24,19 +24,19 @@ pub enum Secp256k1Error {
 
 impl Secp256k1 {
     pub fn ecdh(private_key: &[u8], public_key: &[u8]) -> Result<Vec<u8>, Secp256k1Error> {
-        let sk = SecretKey::from_be_bytes(private_key)?;
+        let sk = SecretKey::from_slice(private_key)?;
         let pk = PublicKey::from_sec1_bytes(public_key)?;
 
         Ok(diffie_hellman(sk.to_nonzero_scalar(), pk.as_affine())
-            .as_bytes()
+            .raw_secret_bytes()
             .to_vec())
     }
 
     #[allow(dead_code)]
     pub fn generate_public_key(private_key: &[u8]) -> Result<Vec<u8>, Secp256k1Error> {
-        let signing_key = SigningKey::from_bytes(private_key.to_vec().as_slice())?;
+        let signing_key = SigningKey::from_slice(private_key.to_vec().as_slice())?;
 
-        Ok(signing_key.verifying_key().to_bytes().to_vec())
+        Ok(signing_key.verifying_key().to_sec1_bytes().to_vec())
     }
 
     #[allow(dead_code)]
@@ -50,11 +50,11 @@ impl Secp256k1 {
 
     #[allow(dead_code)]
     pub fn ecdsa_sign(message: &[u8], private_key: &[u8]) -> Result<Vec<u8>, Secp256k1Error> {
-        let signing_key = SigningKey::from_bytes(private_key.to_vec().as_slice())?;
+        let signing_key = SigningKey::from_slice(private_key.to_vec().as_slice())?;
 
         let signature: Signature = signing_key.try_sign(message.to_vec().as_slice())?;
 
-        Ok(signature.as_ref().to_vec())
+        Ok(signature.to_vec())
     }
 
     pub fn ecdsa_verify(

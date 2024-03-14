@@ -27,30 +27,30 @@ std = []
 alloc = []
 
 [dependencies]
-data-encoding = { version = "2.3.2" }
-serde = { version = "1.0.131", features = ["derive"] }
-serde_json = { version = "1.0.71" }
+data-encoding = { version = "2.5.0" }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = { version = "1.0.114" }
 serde_jcs = { version = "0.1.0" }
 hex = { version = "0.4.3" }
-ibig = { version = "0.3.5" }
-arrayref = { version = "0.3.6" }
-libloading = { version = "0.7.4" }
+ibig = { version = "0.3.6" }
+arrayref = { version = "0.3.7" }
+libloading = { version = "0.8.3" }
 
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.36.0", features = ["full"] }
 chrono = { version = "0.4" }
-async-trait = { version = "0.1.51" }
+async-trait = { version = "0.1.77" }
 
-hdwallet = { version = "0.3.1" }
+hdwallet = { version = "0.4.1" }
 
-base64 = { version = "0.21.0" }
-digest = { version = "0.10.3" }
-sha2 = { version = "0.10.2" }
-k256 = { version = "0.10.4", features = [
+base64 = { version = "0.22.0" }
+digest = { version = "0.10.7" }
+sha2 = { version = "0.10.8" }
+k256 = { version = "0.13.3", features = [
   "ecdh",
   "ecdsa",
   "sha256",
-  "keccak256",
   "serde",
+  "alloc",
 ] }
 hmac = { version = "0.12.1" }
 scrypt = { version = "0.11.0", features = ["simple"] }
@@ -58,47 +58,47 @@ aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-
 getrandom = { version = "0.2" }
 
 didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.0" }
-x25519-dalek = { version = "1.2.0" }
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"]}
 
 reqwest = { version = "0.11", features = [
   "json",
   "rustls-tls",
 ], default-features = false }
-actix = { version = "0.13.0" }
-actix-web = { version = "4.3.0" }
-actix-web-actors = { version = "4.2.0" }
-actix-rt = { version = "2.7.0" }
+actix = { version = "0.13.3" }
+actix-web = { version = "4.5.1" }
+actix-web-actors = { version = "4.3.0" }
+actix-rt = { version = "2.9.0" }
 qstring = { version = "0.7.2" }
 
 colored = { version = "2" }
-log = { version = "0.4.0" }
-env_logger = { version = "0.10.0" }
+log = { version = "0.4.21" }
+env_logger = { version = "0.11.3", features = ["color"]}
 
 home-config = { version = "0.6.0", features = ["json", "yaml", "toml"] }
-clap = { version = "4.0.18", features = ["derive", "cargo"] }
+clap = { version = "4.5.2", features = ["derive", "cargo"] }
 
-dirs = { version = "5.0.0" }
-rumqttc = { version = "0.20.0" }
-cuid = { version = "1.3.1" }
+dirs = { version = "5.0.1" }
+rumqttc = { version = "0.24.0" }
+cuid = { version = "1.3.2" }
 uuid = { version = "1.7.0", features = [
   "v4",
   "fast-rng",
   "macro-diagnostics",
   "serde",
 ] }
-shadow-rs = "0.21.0"
-dotenv = "0.15.0"
+shadow-rs = "0.27.1"
+dotenvy = "0.15.7"
 mac_address = "1.1.5"
 zip-extract = "0.1.3"
 
-anyhow = "1.0.79"
-thiserror = "1.0.30"
+anyhow = "1.0.81"
+thiserror = "1.0.58"
 
 [dev-dependencies]
-rstest = { version = "0.17.0" }
+rstest = { version = "0.18.2" }
 
 [build-dependencies]
-shadow-rs = "0.21.0"
+shadow-rs = "0.27.1"
 
 [profile.dev]
 panic = "abort"

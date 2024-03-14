@@ -2,7 +2,7 @@ extern crate env_logger;
 
 use crate::{config::ServerConfig, controllers::public::nodex_receive};
 use clap::{Parser, Subcommand};
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use handlers::Command;
 use handlers::MqttClient;
 use mac_address::get_mac_address;
@@ -314,27 +314,14 @@ async fn send_device_info() {
 }
 
 fn log_init() {
-    use env_logger::fmt::Color;
-    use log::Level;
-
     let mut builder = env_logger::Builder::from_default_env();
     builder.format(|buf, record| {
-        let level_color = match record.level() {
-            Level::Trace => Color::White,
-            Level::Debug => Color::Blue,
-            Level::Info => Color::Green,
-            Level::Warn => Color::Yellow,
-            Level::Error => Color::Red,
-        };
-        let mut level_style = buf.style();
-        level_style.set_color(level_color);
-
         use std::io::Write;
         writeln!(
             buf,
             "{} [{}] - {} - {} - {}:{}",
             chrono::Utc::now().to_rfc3339(),
-            level_style.value(record.level()),
+            record.level(),
             record.target(),
             record.args(),
             record.file().unwrap_or(""),

@@ -29,7 +29,7 @@ impl BIP32 {
         let public_key = ExtendedPubKey::from_private_key(&private_key);
 
         Ok(BIP32Container {
-            private_key: private_key.private_key.serialize_secret().to_vec(),
+            private_key: private_key.private_key.secret_bytes().to_vec(),
             public_key: public_key.public_key.serialize().to_vec(),
         })
     }
