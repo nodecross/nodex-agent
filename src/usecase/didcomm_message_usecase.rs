@@ -7,6 +7,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
+    nodex::schema::general::GeneralVcDataModel,
     repository::message_activity_repository::{
         CreatedMessageActivityRequest, MessageActivityRepository, VerifiedMessageActivityRequest,
         VerifiedStatus,
@@ -106,7 +107,7 @@ impl DidcommMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<String, VerifyDidcommMessageUseCaseError> {
+    ) -> Result<GeneralVcDataModel, VerifyDidcommMessageUseCaseError> {
         let message = serde_json::from_str::<Value>(message).context("failed to decode str")?;
         let verified = self
             .didcomm_encrypted_service
@@ -128,7 +129,7 @@ impl DidcommMessageUseCase {
         // check in verified. maybe exists?
         let my_did = super::get_my_did();
 
-        let container = verified.credential_subject.container;
+        let container = verified.clone().credential_subject.container;
 
         let message = serde_json::from_value::<EncodedMessage>(container)
             .context("failed to deserialize to EncodedMessage")?;
@@ -147,7 +148,7 @@ impl DidcommMessageUseCase {
                 })
                 .await
                 .context("failed to add verify activity")?;
-            Ok(message.payload)
+            Ok(verified)
         } else {
             self.message_activity_repository
                 .add_verify_activity(VerifiedMessageActivityRequest {

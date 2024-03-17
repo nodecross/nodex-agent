@@ -31,7 +31,7 @@ pub async fn handler(
     );
 
     match usecase.verify(&json.message, now).await {
-        Ok(v) => Ok(HttpResponse::Ok().body(v)),
+        Ok(v) => Ok(HttpResponse::Ok().json(v)),
         Err(e) => match e {
             VerifyVerifiableMessageUseCaseError::VerificationFailed => {
                 Ok(HttpResponse::Unauthorized().finish())

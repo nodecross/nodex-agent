@@ -106,18 +106,17 @@ impl VerifiableMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<String, VerifyVerifiableMessageUseCaseError> {
-        let message =
+    ) -> Result<GeneralVcDataModel, VerifyVerifiableMessageUseCaseError> {
+        let vc =
             serde_json::from_str::<GeneralVcDataModel>(message).context("failed to decode str")?;
-        let from_did = message.issuer.id.clone();
+        let from_did = vc.issuer.id.clone();
 
         // TODO: return GeneralVCDataModel
-        let _ = DIDVCService::verify(&self.vc_service, message.clone())
+        let _ = DIDVCService::verify(&self.vc_service, vc.clone())
             .await
             .context("verify failed")?;
-        let vc = message;
 
-        let container = vc.credential_subject.container;
+        let container = vc.clone().credential_subject.container;
 
         let message = serde_json::from_value::<EncodedMessage>(container)
             .context("failed to deserialize to EncodedMessage")?;
@@ -142,7 +141,7 @@ impl VerifiableMessageUseCase {
                 })
                 .await
                 .context("failed to add verify activity")?;
-            Ok(message.payload)
+            Ok(vc)
         } else {
             self.message_activity_repository
                 .add_verify_activity(VerifiedMessageActivityRequest {
