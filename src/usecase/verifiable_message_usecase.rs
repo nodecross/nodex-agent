@@ -308,7 +308,10 @@ pub mod tests {
         );
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
-        assert_eq!(verified, message);
+        let encoded_message =
+            serde_json::from_value::<EncodedMessage>(verified.credential_subject.container)
+                .unwrap();
+        assert_eq!(encoded_message.payload, message);
     }
 
     mod generate_failed {

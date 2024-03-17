@@ -188,6 +188,7 @@ mod tests {
             didcomm_message_usecase::DidcommMessageUseCase, verifiable_message_usecase::tests::*,
         },
     };
+    use serde_json;
 
     #[tokio::test]
     async fn test_create_and_verify() {
@@ -220,7 +221,10 @@ mod tests {
             .unwrap();
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
-        assert_eq!(verified, message);
+        let encoded_message =
+            serde_json::from_value::<EncodedMessage>(verified.credential_subject.container)
+                .unwrap();
+        assert_eq!(encoded_message.payload, message);
     }
 
     mod generate_failed {

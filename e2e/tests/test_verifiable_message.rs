@@ -90,8 +90,14 @@ async fn verify_verifiable_message_scenario(input: String) -> anyhow::Result<()>
     assert_eq!(response.status(), StatusCode::OK);
 
     let body = response_to_string(response).await?;
+    let body_json = serde_json::from_str::<serde_json::Value>(&body)?;
 
-    assert_eq!(body, "Hello, world!");
+    assert_eq!(
+        body_json["credentialSubject"]["container"]["payload"]
+            .as_str()
+            .unwrap(),
+        "Hello, world!"
+    );
 
     Ok(())
 }
