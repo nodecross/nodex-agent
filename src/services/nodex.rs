@@ -1,62 +1,37 @@
+use crate::nodex::keyring;
+use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::server_config;
-use crate::{
-    nodex::{
-        keyring,
-        sidetree::payload::{
-            CommitmentKeys, DIDCreateRequest, DIDResolutionResponse, OperationPayloadBuilder,
-        },
-        utils::http_client::{HttpClient, HttpClientConfig},
-    },
-    repository::did_repository::DidRepository,
-};
 
-use reqwest::StatusCode;
-use serde::Deserialize;
+use nodex_didcomm::did::did_repository::{
+    CreateIdentifierError, DidRepository, DidRepositoryImpl, FindIdentifierError,
+};
+use nodex_didcomm::did::sidetree::payload::DIDResolutionResponse;
+
+use nodex_didcomm::keyring::keypair::KeyPairing;
+
 use std::{fs, io::Cursor, path::PathBuf, process::Command};
-use thiserror::Error;
+
 use zip_extract;
 
 pub struct NodeX {
-    http_client: HttpClient,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SideTreeErrorBody {
-    pub code: String,
-    pub message: String,
-}
-
-#[derive(Debug, Error)]
-#[error("SideTreeError: {status_code}")]
-pub struct SideTreeError {
-    pub status_code: StatusCode,
-    pub error: SideTreeErrorBody,
+    repository: DidRepositoryImpl<SideTreeClient>,
 }
 
 impl NodeX {
     pub fn new() -> Self {
         let server_config = server_config();
-        let client_config: HttpClientConfig = HttpClientConfig {
-            base_url: server_config.did_http_endpoint(),
-        };
-
-        let client = match HttpClient::new(&client_config) {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("{:?}", e);
-                panic!()
-            }
-        };
+        let sidetree_client = SideTreeClient::new(&server_config.did_http_endpoint()).unwrap();
+        let did_repository = DidRepositoryImpl::new(sidetree_client);
 
         NodeX {
-            http_client: client,
+            repository: did_repository,
         }
     }
 
     // NOTE: DONE
     pub async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
         // NOTE: find did
-        if let Ok(v) = keyring::keypair::KeyPairing::load_keyring() {
+        if let Ok(v) = keyring::keypair::KeyPairingWithConfig::load_keyring() {
             if let Ok(did) = v.get_identifier() {
                 if let Some(json) = self.find_identifier(&did).await? {
                     return Ok(json);
@@ -64,42 +39,14 @@ impl NodeX {
             }
         }
 
-        // NOTE: does not exists did key ring
-        let mut keyring = keyring::keypair::KeyPairing::create_keyring()?;
-
-        // NOTE: create payload
-        let public = keyring
-            .get_sign_key_pair()
-            .to_public_key("signingKey", &["auth", "general"])?;
-        let update = keyring.get_recovery_key_pair().to_jwk(false)?;
-        let recovery = keyring.get_update_key_pair().to_jwk(false)?;
-        let payload = OperationPayloadBuilder::did_create_payload(&DIDCreateRequest {
-            public_keys: vec![public],
-            commitment_keys: CommitmentKeys { recovery, update },
-            service_endpoints: vec![],
-        })?;
-
+        let mut keyring_with_config = keyring::keypair::KeyPairingWithConfig::create_keyring()?;
         let res = self
-            .http_client
-            .post("/api/v1/operations", &payload)
+            .repository
+            .create_identifier(keyring_with_config.get_keyring())
             .await?;
+        keyring_with_config.save(&res.did_document.id);
 
-        if res.status().is_success() {
-            let json = res.json::<DIDResolutionResponse>().await?;
-
-            // NOTE: save context
-            keyring.save(&json.did_document.id);
-
-            Ok(json)
-        } else {
-            let status = res.status();
-            let error = res.json::<SideTreeErrorBody>().await?;
-            Err(SideTreeError {
-                status_code: status,
-                error,
-            }
-            .into())
-        }
+        Ok(res)
     }
 
     // NOTE: DONE
@@ -107,23 +54,9 @@ impl NodeX {
         &self,
         did: &str,
     ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-        let res = self
-            .http_client
-            .get(&(format!("/api/v1/identifiers/{}", &did)))
-            .await?;
+        let res = self.repository.find_identifier(&did).await?;
 
-        match res.status() {
-            StatusCode::OK => Ok(Some(res.json::<DIDResolutionResponse>().await?)),
-            StatusCode::NOT_FOUND => Ok(None),
-            other => {
-                let error = res.json::<SideTreeErrorBody>().await?;
-                Err(SideTreeError {
-                    status_code: other,
-                    error,
-                }
-                .into())
-            }
-        }
+        Ok(res)
     }
 
     pub async fn update_version(&self, binary_url: &str, output_path: &str) -> anyhow::Result<()> {
@@ -155,14 +88,20 @@ impl NodeX {
     }
 }
 
-// TODO: use other impl
+// TODO: remove this. use DidRepositoryImpl directly
 #[async_trait::async_trait]
 impl DidRepository for NodeX {
-    async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-        NodeX::create_identifier(self).await
+    async fn create_identifier(
+        &self,
+        keyring: KeyPairing,
+    ) -> Result<DIDResolutionResponse, CreateIdentifierError> {
+        self.repository.create_identifier(keyring).await
     }
 
-    async fn find_identifier(&self, did: &str) -> anyhow::Result<Option<DIDResolutionResponse>> {
-        NodeX::find_identifier(self, did).await
+    async fn find_identifier(
+        &self,
+        did: &str,
+    ) -> Result<Option<DIDResolutionResponse>, FindIdentifierError> {
+        self.repository.find_identifier(did).await
     }
 }

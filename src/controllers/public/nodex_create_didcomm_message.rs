@@ -1,14 +1,11 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
 use serde::{Deserialize, Serialize};
 
 use crate::{services::hub::Hub, usecase::didcomm_message_usecase::DidcommMessageUseCase};
 use crate::{
-    services::{
-        internal::{did_vc::DIDVCService, didcomm_encrypted::DIDCommEncryptedService},
-        nodex::NodeX,
-        project_verifier::ProjectVerifierImplOnNetworkConfig,
-    },
+    services::{nodex::NodeX, project_verifier::ProjectVerifierImplOnNetworkConfig},
     usecase::didcomm_message_usecase::GenerateDidcommMessageUseCaseError,
 };
 
@@ -29,7 +26,7 @@ pub async fn handler(
     let usecase = DidcommMessageUseCase::new(
         ProjectVerifierImplOnNetworkConfig::new(),
         Hub::new(),
-        DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new())),
+        DIDCommEncryptedService::new(NodeX::new(), None),
     );
 
     match usecase

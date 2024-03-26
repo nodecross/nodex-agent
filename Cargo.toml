@@ -37,7 +37,7 @@ arrayref = { version = "0.3.7" }
 libloading = { version = "0.8.3" }
 
 tokio = { version = "1.36.0", features = ["full"] }
-chrono = { version = "0.4" }
+chrono = { version = "0.4", features = ["serde"] }
 async-trait = { version = "0.1.77" }
 
 hdwallet = { version = "0.4.1" }
@@ -57,7 +57,7 @@ scrypt = { version = "0.11.0", features = ["simple"] }
 aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-siv-v0.11.0-pre" }
 getrandom = { version = "0.2" }
 
-didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.0" }
+nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0"}
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"]}
 
 reqwest = { version = "0.11", features = [
@@ -96,6 +96,7 @@ thiserror = "1.0.58"
 
 [dev-dependencies]
 rstest = { version = "0.18.2" }
+nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0"}
 
 [build-dependencies]
 shadow-rs = "0.27.1"

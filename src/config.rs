@@ -1,10 +1,13 @@
 use home_config::HomeConfig;
+use nodex_didcomm::keyring::keypair::KeyPairing;
+
+use nodex_didcomm::keyring::secp256k1::Secp256k1HexKeyPair;
 use serde::Deserialize;
 use serde::Serialize;
+use std::env;
 use std::io;
 use std::io::Write;
 use std::path::Path;
-use std::{env, error::Error};
 use std::{
     fs,
     sync::{Arc, Mutex, Once},
@@ -12,16 +15,18 @@ use std::{
 use std::{fs::OpenOptions, sync::MutexGuard};
 use thiserror::Error;
 
-pub struct KeyPair {
-    pub public_key: Vec<u8>,
-    pub secret_key: Vec<u8>,
+pub type KeyPair = nodex_didcomm::keyring::secp256k1::Secp256k1;
+
+trait KeyPairExt {
+    fn to_keypair_config(&self) -> KeyPairConfig;
 }
 
-impl KeyPair {
+impl KeyPairExt for KeyPair {
     fn to_keypair_config(&self) -> KeyPairConfig {
+        let hex = self.to_hex_key_pair();
         KeyPairConfig {
-            public_key: hex::encode(&self.public_key),
-            secret_key: hex::encode(&self.secret_key),
+            public_key: hex.public,
+            secret_key: hex.private,
         }
     }
 }
@@ -33,14 +38,13 @@ struct KeyPairConfig {
 }
 
 impl KeyPairConfig {
-    fn to_keypair(&self) -> Result<KeyPair, Box<dyn Error>> {
-        let pk = hex::decode(&self.public_key)?;
-        let sk = hex::decode(&self.secret_key)?;
+    fn to_keypair(&self) -> anyhow::Result<KeyPair> {
+        let hex = Secp256k1HexKeyPair {
+            public: self.public_key.clone(),
+            private: self.secret_key.clone(),
+        };
 
-        Ok(KeyPair {
-            public_key: pk,
-            secret_key: sk,
-        })
+        Ok(KeyPair::from_hex_key_pair(&hex)?)
     }
 }
 
@@ -150,7 +154,7 @@ pub struct AppConfig {
 #[derive(Error, Debug)]
 pub enum AppConfigError {
     #[error("key decode failed")]
-    DecodeFailed(Box<dyn std::error::Error>),
+    DecodeFailed(anyhow::Error),
     #[error("failed to write config file")]
     WriteError(home_config::JsonError),
 }
@@ -202,19 +206,6 @@ impl AppConfig {
         self.config
             .save_json(&self.root)
             .map_err(AppConfigError::WriteError)
-    }
-
-    fn decode(&self, value: &Option<String>) -> Option<Vec<u8>> {
-        match value {
-            Some(v) => match hex::decode(v) {
-                Ok(v) => Some(v),
-                Err(e) => {
-                    log::error!("{:?}", e);
-                    None
-                }
-            },
-            None => None,
-        }
     }
 
     // NOTE: trng - read
@@ -278,6 +269,19 @@ impl AppConfig {
         config.to_keypair().map_err(AppConfigError::DecodeFailed)
     }
 
+    pub fn load_keyring(&self) -> Option<KeyPairing> {
+        let sign = self.load_sign_key_pair()?;
+        let update = self.load_update_key_pair()?;
+        let recovery = self.load_recovery_key_pair()?;
+        let encrypt = self.load_encrypt_key_pair()?;
+        Some(KeyPairing {
+            sign,
+            update,
+            recovery,
+            encrypt,
+        })
+    }
+
     pub fn save_sign_key_pair(&mut self, value: &KeyPair) -> Result<(), AppConfigError> {
         self.root.key_pairs.sign = Some(value.to_keypair_config());
         self.write()
@@ -307,19 +311,9 @@ impl AppConfig {
     pub fn load_recovery_key_pair(&self) -> Option<KeyPair> {
         match self.root.key_pairs.recover.clone() {
             Some(v) => {
-                let pk = match self.decode(&Some(v.public_key)) {
-                    Some(v) => v,
-                    None => return None,
-                };
-                let sk = match self.decode(&Some(v.secret_key)) {
-                    Some(v) => v,
-                    None => return None,
-                };
+                let keypair = v.to_keypair().expect("failed to decode keypair");
 
-                Some(KeyPair {
-                    public_key: pk,
-                    secret_key: sk,
-                })
+                Some(keypair)
             }
             None => None,
         }
@@ -334,19 +328,9 @@ impl AppConfig {
     pub fn load_encrypt_key_pair(&self) -> Option<KeyPair> {
         match self.root.key_pairs.encrypt.clone() {
             Some(v) => {
-                let pk = match self.decode(&Some(v.public_key)) {
-                    Some(v) => v,
-                    None => return None,
-                };
-                let sk = match self.decode(&Some(v.secret_key)) {
-                    Some(v) => v,
-                    None => return None,
-                };
+                let keypair = v.to_keypair().expect("failed to decode keypair");
 
-                Some(KeyPair {
-                    public_key: pk,
-                    secret_key: sk,
-                })
+                Some(keypair)
             }
             None => None,
         }

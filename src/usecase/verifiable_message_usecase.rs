@@ -1,32 +1,34 @@
 use crate::{
-    nodex::schema::general::GeneralVcDataModel,
-    repository::{did_repository::DidRepository, message_activity_repository::*},
-    services::{
-        internal::did_vc::{DIDVCService, DIDVCServiceError},
-        project_verifier::ProjectVerifier,
-    },
+    repository::message_activity_repository::*, services::project_verifier::ProjectVerifier,
 };
 use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
+use nodex_didcomm::{
+    did::did_repository::DidRepository,
+    verifiable_credentials::{
+        did_vc::{DIDVCService, DIDVCServiceGenerateError, DIDVCServiceVerifyError},
+        types::VerifiableCredentials,
+    },
+};
 use serde::{Deserialize, Serialize};
 
 use thiserror::Error;
 use uuid::Uuid;
 
-pub struct VerifiableMessageUseCase {
+pub struct VerifiableMessageUseCase<R: DidRepository> {
     project_verifier: Box<dyn ProjectVerifier>,
     did_repository: Box<dyn DidRepository>,
     message_activity_repository: Box<dyn MessageActivityRepository>,
-    vc_service: DIDVCService,
+    vc_service: DIDVCService<R>,
 }
 
-impl VerifiableMessageUseCase {
+impl<R: DidRepository> VerifiableMessageUseCase<R> {
     pub fn new(
         project_verifier: Box<dyn ProjectVerifier>,
         did_repository: Box<dyn DidRepository>,
         message_activity_repository: Box<dyn MessageActivityRepository>,
-        vc_service: DIDVCService,
+        vc_service: DIDVCService<R>,
     ) -> Self {
         Self {
             project_verifier,
@@ -42,7 +44,7 @@ pub enum CreateVerifiableMessageUseCaseError {
     #[error("destination did not found")]
     DestinationNotFound,
     #[error(transparent)]
-    VCServiceFailed(#[from] DIDVCServiceError),
+    VCServiceFailed(#[from] DIDVCServiceGenerateError),
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("unauthorized: {0}")]
@@ -64,7 +66,7 @@ pub enum VerifyVerifiableMessageUseCaseError {
     #[error("This message is not addressed to me")]
     NotAddressedToMe,
     #[error(transparent)]
-    VCServiceFailed(#[from] DIDVCServiceError),
+    VCServiceFailed(#[from] DIDVCServiceVerifyError),
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("unauthorized: {0}")]
@@ -79,7 +81,7 @@ pub enum VerifyVerifiableMessageUseCaseError {
     Other(#[from] anyhow::Error),
 }
 
-impl VerifiableMessageUseCase {
+impl<R: DidRepository> VerifiableMessageUseCase<R> {
     pub async fn generate(
         &self,
         destination_did: String,
@@ -89,11 +91,13 @@ impl VerifiableMessageUseCase {
     ) -> Result<String, CreateVerifiableMessageUseCaseError> {
         self.did_repository
             .find_identifier(&destination_did)
-            .await?
+            .await
+            .context("unexpected error occurred when find a did")?
             .ok_or(CreateVerifiableMessageUseCaseError::DestinationNotFound)?;
 
         let message_id = Uuid::new_v4();
         let my_did = super::get_my_did();
+        let my_keyring = super::get_my_keyring();
         let message = EncodedMessage {
             message_id,
             payload: message,
@@ -103,7 +107,9 @@ impl VerifiableMessageUseCase {
         };
 
         let message = serde_json::to_value(message).context("failed to convert to value")?;
-        let vc = DIDVCService::generate(&self.vc_service, &message, now)?;
+        let vc = self
+            .vc_service
+            .generate(&my_did, &my_keyring, &message, now)?;
 
         let result = serde_json::to_string(&vc).context("failed to serialize")?;
 
@@ -146,15 +152,11 @@ impl VerifiableMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<GeneralVcDataModel, VerifyVerifiableMessageUseCaseError> {
-        let vc =
-            serde_json::from_str::<GeneralVcDataModel>(message).context("failed to decode str")?;
-        let from_did = vc.issuer.id.clone();
+    ) -> Result<VerifiableCredentials, VerifyVerifiableMessageUseCaseError> {
+        let vc = serde_json::from_str::<VerifiableCredentials>(message)
+            .context("failed to decode str")?;
 
-        // TODO: return GeneralVCDataModel
-        let _ = DIDVCService::verify(&self.vc_service, vc.clone())
-            .await
-            .context("verify failed")?;
+        let vc = self.vc_service.verify(vc).await?;
 
         let container = vc.clone().credential_subject.container;
 
@@ -162,6 +164,7 @@ impl VerifiableMessageUseCase {
             .context("failed to deserialize to EncodedMessage")?;
 
         let my_did = super::get_my_did();
+        let from_did = vc.issuer.id.clone();
 
         if message.destination_did != my_did {
             return Err(VerifyVerifiableMessageUseCaseError::NotAddressedToMe);
@@ -246,12 +249,16 @@ pub mod tests {
     use super::*;
     use crate::usecase::get_my_did;
     use crate::{
-        nodex::keyring::keypair::KeyPairing,
-        nodex::sidetree::payload::{
-            DIDDocument, DIDResolutionResponse, DidPublicKey, MethodMetadata,
-        },
-        services::project_verifier::ProjectVerifier,
+        nodex::keyring::keypair::KeyPairingWithConfig, services::project_verifier::ProjectVerifier,
     };
+    use nodex_didcomm::did::did_repository::{
+        CreateIdentifierError, DidRepository, FindIdentifierError,
+    };
+    use nodex_didcomm::did::sidetree::payload::{
+        DIDDocument, DIDResolutionResponse, DidPublicKey, MethodMetadata,
+    };
+    use nodex_didcomm::keyring::keypair::KeyPairing;
+    use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
     use serde_json::Value;
 
     pub struct MockProjectVerifier {}
@@ -266,31 +273,41 @@ pub mod tests {
         }
     }
 
-    pub struct MockDidRepository {}
-
     const DEFAULT_DID: &str = "did:nodex:test:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+    pub fn initialize_keyring() {
+        if KeyPairingWithConfig::load_keyring().is_err() {
+            // DID doesn't matter
+            let mut keyring =
+                KeyPairingWithConfig::create_keyring().expect("failed to create keyring");
+            keyring.save(DEFAULT_DID);
+        }
+    }
+
+    pub struct MockDidRepository {}
 
     #[async_trait::async_trait]
     impl DidRepository for MockDidRepository {
-        async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-            if KeyPairing::load_keyring().is_err() {
-                // DID doesn't matter
-                let mut keyring = KeyPairing::create_keyring()?;
-                keyring.save(DEFAULT_DID);
-            }
-
-            self.find_identifier(DEFAULT_DID)
-                .await
-                .and_then(|x| x.context("unreachable"))
+        async fn create_identifier(
+            &self,
+            _keyring: KeyPairing,
+        ) -> Result<DIDResolutionResponse, CreateIdentifierError> {
+            unreachable!()
         }
         async fn find_identifier(
             &self,
             did: &str,
-        ) -> anyhow::Result<Option<DIDResolutionResponse>> {
+        ) -> Result<Option<DIDResolutionResponse>, FindIdentifierError> {
             // extract from NodeX::create_identifier
-            let jwk = KeyPairing::load_keyring()?
-                .get_sign_key_pair()
-                .to_jwk(false)?;
+
+            // get local keyring
+            let keyring = KeyPairingWithConfig::load_keyring()
+                .expect("failed to load keyring")
+                .get_keyring();
+            let jwk = keyring
+                .sign
+                .to_jwk(false)
+                .expect("failed to convert to jwk");
 
             let response = DIDResolutionResponse {
                 context: "https://www.w3.org/ns/did-resolution/v1".to_string(),
@@ -316,6 +333,24 @@ pub mod tests {
         }
     }
 
+    pub struct NotFoundDidRepository {}
+
+    #[async_trait::async_trait]
+    impl DidRepository for NotFoundDidRepository {
+        async fn create_identifier(
+            &self,
+            _keyring: KeyPairing,
+        ) -> Result<DIDResolutionResponse, CreateIdentifierError> {
+            unreachable!()
+        }
+        async fn find_identifier(
+            &self,
+            _did: &str,
+        ) -> Result<Option<DIDResolutionResponse>, FindIdentifierError> {
+            Ok(None)
+        }
+    }
+
     pub struct MockActivityRepository {}
 
     #[async_trait::async_trait]
@@ -338,9 +373,7 @@ pub mod tests {
     #[tokio::test]
     async fn test_create_and_verify() {
         // generate local did and keys
-        let repository = MockDidRepository {};
-        let _did = repository.create_identifier().await.unwrap();
-        dbg!(&_did);
+        initialize_keyring();
 
         let usecase = VerifiableMessageUseCase {
             project_verifier: Box::new(MockProjectVerifier {}),
@@ -393,21 +426,6 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_generate_did_not_found() {
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
-
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier {}),
                 did_repository: Box::new(NotFoundDidRepository {}),
@@ -556,8 +574,7 @@ pub mod tests {
         #[tokio::test]
         async fn test_verify_not_addressed_to_me() {
             // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
+            initialize_keyring();
 
             let destination_did = "did:nodex:test:ILLEGAL".to_string();
             let message = "Hello".to_string();
@@ -586,8 +603,7 @@ pub mod tests {
         #[tokio::test]
         async fn test_verify_verify_failed() {
             // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
+            initialize_keyring();
 
             struct VerifyFailedVerifier {}
 
@@ -619,23 +635,7 @@ pub mod tests {
         #[tokio::test]
         async fn test_verify_did_not_found() {
             // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
-
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
+            initialize_keyring();
 
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier {}),

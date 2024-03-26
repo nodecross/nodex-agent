@@ -1,6 +1,8 @@
-use crate::services::{hub::Hub, internal::didcomm_encrypted::DIDCommEncryptedService};
-use crate::services::{internal::did_vc::DIDVCService, nodex::NodeX};
+use crate::services::hub::Hub;
+use crate::services::nodex::NodeX;
 use anyhow::anyhow;
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
+use nodex_didcomm::keyring::keypair::KeyPairing;
 use serde::{Deserialize, Serialize};
 use std::{
     sync::{atomic::AtomicBool, Arc},
@@ -43,14 +45,21 @@ impl MessageReceiveUsecase {
     }
 
     pub async fn receive_message(&self) -> anyhow::Result<()> {
+        fn get_my_keyring() -> KeyPairing {
+            let config = crate::app_config();
+            let config = config.lock();
+            config.load_keyring().expect("failed to load keyring")
+        }
+
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
+        let service = DIDCommEncryptedService::new(NodeX::new(), None);
 
         for m in self.hub.get_message(&self.project_did).await? {
+            let my_keyring = get_my_keyring();
             let json_message = serde_json::from_str(&m.raw_message)
                 .map_err(|e| anyhow::anyhow!("Invalid Json: {:?}", e))?;
             log::info!("Receive message. message_id = {:?}", m.id);
-            match service.verify(&json_message).await {
+            match service.verify(&my_keyring, &json_message).await {
                 Ok(verified) => {
                     log::info!(
                         "Verify success. message_id = {}, from = {}",

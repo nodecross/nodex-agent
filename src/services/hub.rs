@@ -1,3 +1,4 @@
+use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::repository::message_activity_repository::MessageActivityHttpError;
 use crate::server_config;
 use crate::{
@@ -9,13 +10,12 @@ use crate::{
 
 use anyhow::Context;
 
+use nodex_didcomm::did::did_repository::DidRepositoryImpl;
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use super::{
-    internal::{did_vc::DIDVCService, didcomm_encrypted::DIDCommEncryptedService},
-    nodex::NodeX,
-};
+use super::{get_my_did, get_my_keyring};
 
 #[derive(Deserialize)]
 pub struct EmptyResponse {}
@@ -33,6 +33,7 @@ struct ErrorResponse {
 
 pub struct Hub {
     http_client: HubClient,
+    didcomm_service: DIDCommEncryptedService<DidRepositoryImpl<SideTreeClient>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,8 +74,15 @@ impl Hub {
             }
         };
 
+        let sidetree_client = SideTreeClient::new(&server_config.did_http_endpoint())
+            .expect("failed to create sidetree client");
+        let did_repository = DidRepositoryImpl::new(sidetree_client);
+        let service =
+            DIDCommEncryptedService::new(did_repository, Some(server_config.did_attachment_link()));
+
         Hub {
             http_client: client,
+            didcomm_service: service,
         }
     }
 
@@ -212,15 +220,25 @@ impl MessageActivityRepository for Hub {
         request: CreatedMessageActivityRequest,
     ) -> Result<(), MessageActivityHttpError> {
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
-
         let project_did = {
             let network = crate::network_config();
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let payload = service
-            .generate(&project_did, &json!(request), None, request.occurred_at)
+
+        let my_did = get_my_did();
+        let my_keyring = get_my_keyring();
+
+        let payload = self
+            .didcomm_service
+            .generate(
+                &my_did,
+                &project_did,
+                &my_keyring,
+                &json!(request),
+                None,
+                request.occurred_at,
+            )
             .await
             .context("failed to generate payload")?;
         let payload = serde_json::to_string(&payload).context("failed to serialize")?;
@@ -262,14 +280,25 @@ impl MessageActivityRepository for Hub {
         request: VerifiedMessageActivityRequest,
     ) -> Result<(), MessageActivityHttpError> {
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
         let project_did = {
             let network = crate::network_config();
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let payload = service
-            .generate(&project_did, &json!(request), None, request.verified_at)
+
+        let my_did = get_my_did();
+        let my_keyring = get_my_keyring();
+
+        let payload = self
+            .didcomm_service
+            .generate(
+                &my_did,
+                &project_did,
+                &my_keyring,
+                &json!(request),
+                None,
+                request.verified_at,
+            )
             .await
             .context("failed to generate payload")?;
         let payload = serde_json::to_string(&payload).context("failed to serialize")?;

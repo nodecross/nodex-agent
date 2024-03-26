@@ -2,7 +2,6 @@ use thiserror::Error;
 
 use crate::nodex::runtime;
 
-#[allow(dead_code)]
 pub struct Hasher {}
 
 #[derive(Debug, Error)]

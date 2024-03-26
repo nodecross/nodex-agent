@@ -1,13 +1,12 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
+
+use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
 use serde::{Deserialize, Serialize};
 
 use crate::{services::hub::Hub, usecase::verifiable_message_usecase::VerifiableMessageUseCase};
 use crate::{
-    services::{
-        internal::did_vc::DIDVCService, nodex::NodeX,
-        project_verifier::ProjectVerifierImplOnNetworkConfig,
-    },
+    services::{nodex::NodeX, project_verifier::ProjectVerifierImplOnNetworkConfig},
     usecase::verifiable_message_usecase::VerifyVerifiableMessageUseCaseError,
 };
 
