@@ -4,10 +4,8 @@ use anyhow::anyhow;
 use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
 use nodex_didcomm::keyring::keypair::KeyPairing;
 use serde::{Deserialize, Serialize};
-use std::{
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
+use tokio::sync::Notify;
 
 #[derive(Deserialize)]
 enum OperationType {
@@ -104,17 +102,23 @@ impl MessageReceiveUsecase {
     }
 }
 
-pub async fn polling_task(shutdown_marker: Arc<AtomicBool>) {
+pub async fn polling_task(shutdown_notify: Arc<Notify>) {
     log::info!("Polling task is started");
 
     let usecase = MessageReceiveUsecase::new();
 
     let mut interval = tokio::time::interval(Duration::from_secs(3600));
-    while !shutdown_marker.load(std::sync::atomic::Ordering::SeqCst) {
-        interval.tick().await;
-        match usecase.receive_message().await {
-            Ok(_) => {}
-            Err(e) => log::error!("Error: {:?}", e),
+    loop {
+        tokio::select! {
+            _ = interval.tick() => {
+                match usecase.receive_message().await {
+                    Ok(_) => {},
+                    Err(e) => log::error!("Error: {:?}", e),
+                }
+            }
+            _ = shutdown_notify.notified() => {
+                break;
+            },
         }
     }
 

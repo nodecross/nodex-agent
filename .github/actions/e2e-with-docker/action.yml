@@ -25,6 +25,78 @@ runs:
     - name: (run) e2e tests
       shell: bash
       run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e run e2e_runner cargo test
+    
+    - name: (run) install procps in agent container
+      shell: bash
+      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e exec e2e_agent bash -c "apt-get update && apt-get install -y procps"
+
+    - name: (run) shutdown agent by SIGINT
+      shell: bash
+      run: |
+        container_id=$(docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e ps -q e2e_agent)
+        pid=$(docker exec $container_id pgrep -f nodex-agent)
+        docker exec $container_id kill -SIGINT $pid
+        sleep 3
+      if: ${{ always() }}
+
+    - name: (run) Check for 'SIGINT' log message
+      shell: bash
+      id: check_logs_for_sigint
+      run: |
+        if docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e logs e2e_agent | grep -q "SIGINT"; then
+          echo "::set-output name=stopped_found::true"
+        else
+          echo "::set-output name=stopped_found::false"
+        fi
+
+    - name: (run)  Verify process is not running in e2e_agent by SIGINT
+      shell: bash
+      if: steps.check_logs_for_sigint.outputs.stopped_found == 'true'
+      run: |
+        container_id=$(docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e ps -q e2e_agent)
+        if ! docker exec $container_id pgrep -f /tmp/nodex-agent; then
+          echo "Process not found, as expected."
+        else
+          echo "Process is still running, which is not expected."
+          exit 1
+        fi
+
+    - name: (run) restart agent container
+      shell: bash
+      run: |
+        docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e stop e2e_agent
+        docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e up e2e_agent -d
+
+    - name: (run) shutdown agent by SIGTERM
+      shell: bash
+      run: |
+        container_id=$(docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e ps -q e2e_agent)
+        pid=$(docker exec $container_id pgrep -f nodex-agent)
+        docker exec $container_id kill -SIGTERM $pid
+        sleep 3
+      if: ${{ always() }}
+
+    - name: (run) Check for 'SIGTERM' log message
+      shell: bash
+      id: check_logs_for_sigterm
+      run: |
+        if docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e logs e2e_agent | grep -q "SIGTERM"; then
+          echo "::set-output name=stopped_found::true"
+        else
+          echo "::set-output name=stopped_found::false"
+        fi
+
+    - name: (run) Verify process is not running in e2e_agent by SIGTERM
+      shell: bash
+      if: steps.check_logs_for_sigterm.outputs.stopped_found == 'true'
+      run: |
+        container_id=$(docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e ps -q e2e_agent)
+        if ! docker exec $container_id pgrep -f /tmp/nodex-agent; then
+          echo "Process not found, as expected."
+        else
+          echo "Process is still running, which is not expected."
+          exit 1
+        fi
 
     - name: (run) show log of agent
       shell: bash
