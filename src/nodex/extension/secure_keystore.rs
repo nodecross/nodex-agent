@@ -55,8 +55,8 @@ impl SecureKeyStore {
         log::info!("Called: write_external (type: {:?})", key_type);
 
         unsafe {
-            let encoded_secret_key = hex::encode(&key_pair.get_secret_key());
-            let encoded_public_key = hex::encode(&key_pair.get_public_key());
+            let encoded_secret_key = hex::encode(key_pair.get_secret_key());
+            let encoded_public_key = hex::encode(key_pair.get_public_key());
             let secret_key = [encoded_secret_key.as_bytes(), b"\0"].concat();
             let public_key = [encoded_public_key.as_bytes(), b"\0"].concat();
 

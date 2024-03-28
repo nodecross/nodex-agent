@@ -54,7 +54,7 @@ impl NodeX {
         &self,
         did: &str,
     ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-        let res = self.repository.find_identifier(&did).await?;
+        let res = self.repository.find_identifier(did).await?;
 
         Ok(res)
     }
