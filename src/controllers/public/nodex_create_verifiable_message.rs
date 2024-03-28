@@ -10,6 +10,8 @@ use crate::{
     usecase::verifiable_message_usecase::CreateVerifiableMessageUseCaseError,
 };
 
+use super::{get_my_did, get_my_keyring};
+
 // NOTE: POST /create-verifiable-message
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
@@ -23,12 +25,16 @@ pub async fn handler(
     web::Json(json): web::Json<MessageContainer>,
 ) -> actix_web::Result<HttpResponse> {
     let now = Utc::now();
+    let my_did = get_my_did();
+    let my_keyring = get_my_keyring();
 
     let usecase = VerifiableMessageUseCase::new(
         Box::new(ProjectVerifierImplOnNetworkConfig::new()),
         Box::new(NodeX::new()),
         Box::new(Hub::new()),
         DIDVCService::new(NodeX::new()),
+        my_did,
+        my_keyring,
     );
 
     match usecase

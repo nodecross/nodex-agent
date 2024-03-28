@@ -9,6 +9,8 @@ use crate::{
     usecase::didcomm_message_usecase::{DidcommMessageUseCase, VerifyDidcommMessageUseCaseError},
 };
 
+use super::{get_my_did, get_my_keyring};
+
 // NOTE: POST /verify-verifiable-message
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
@@ -21,10 +23,15 @@ pub async fn handler(
 ) -> actix_web::Result<HttpResponse> {
     let now = Utc::now();
 
+    let my_did = get_my_did();
+    let my_keyring = get_my_keyring();
+
     let usecase = DidcommMessageUseCase::new(
         ProjectVerifierImplOnNetworkConfig::new(),
         Hub::new(),
         DIDCommEncryptedService::new(NodeX::new(), None),
+        my_did,
+        my_keyring,
     );
 
     match usecase.verify(&json.message, now).await {
