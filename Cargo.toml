@@ -1,16 +1,18 @@
 [package]
-name = "nodex"
-version = "1.2.4"
 authors = ["NodeX Authors <>"]
-edition = "2018"
-license-file = "LICENSE"
+categories = ["cryptography", "embedded"]
 description = "Automate device security provisioning with edge intelligence."
-homepage = "https://nodecross.io"
-documentation = "https://docs.nodecross.io"
-repository = "https://github.com/nodecross/nodex"
+edition = "2018"
+keywords = ["did", "embedded", "iot", "root-of-trust"]
+license-file = "LICENSE"
+name = "nodex"
 readme = "README.md"
-keywords = ["iot", "embedded", "root-of-trust", "did"]
-categories = ["embedded", "cryptography"]
+version = "1.2.4"
+
+documentation = "https://docs.nodecross.io"
+homepage = "https://nodecross.io"
+repository = "https://github.com/nodecross/nodex"
+
 build = "build.rs"
 
 [workspace]
@@ -22,93 +24,62 @@ path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
+alloc = []
 default = ["std"]
 std = []
-alloc = []
 
 [dependencies]
-data-encoding = { version = "2.5.0" }
+actix-rt = { version = "2.9.0" }
+actix-web = { version = "4.5.1" }
+anyhow = "1.0.81"
+async-trait = { version = "0.1.77" }
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.5.2", features = ["cargo", "derive"] }
+cuid = { version = "1.3.2" }
+dirs = { version = "5.0.1" }
+dotenvy = "0.15.7"
+env_logger = { version = "0.11.3", features = ["color"] }
+hex = { version = "0.4.3" }
+hmac = { version = "0.12.1" }
+home-config = { version = "0.6.0", features = ["json", "toml", "yaml"] }
+libloading = { version = "0.8.3" }
+log = { version = "0.4.21" }
+mac_address = "1.1.5"
+nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0" }
+reqwest = { version = "0.11", features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
+rumqttc = { version = "0.24.0" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = { version = "1.0.114" }
-serde_jcs = { version = "0.1.0" }
-hex = { version = "0.4.3" }
-ibig = { version = "0.3.6" }
-arrayref = { version = "0.3.7" }
-libloading = { version = "0.8.3" }
-
-tokio = { version = "1.36.0", features = ["full"] }
-chrono = { version = "0.4", features = ["serde"] }
-async-trait = { version = "0.1.77" }
-
-hdwallet = { version = "0.4.1" }
-
-base64 = { version = "0.22.0" }
-digest = { version = "0.10.7" }
 sha2 = { version = "0.10.8" }
-k256 = { version = "0.13.3", features = [
-  "ecdh",
-  "ecdsa",
-  "sha256",
-  "serde",
-  "alloc",
-] }
-hmac = { version = "0.12.1" }
-scrypt = { version = "0.11.0", features = ["simple"] }
-aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-siv-v0.11.0-pre" }
-getrandom = { version = "0.2" }
-
-nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0"}
-x25519-dalek = { version = "2.0.1", features = ["static_secrets"]}
-
-reqwest = { version = "0.11", features = [
-  "json",
-  "rustls-tls",
-], default-features = false }
-actix = { version = "0.13.3" }
-actix-web = { version = "4.5.1" }
-actix-web-actors = { version = "4.3.0" }
-actix-rt = { version = "2.9.0" }
-qstring = { version = "0.7.2" }
-
-colored = { version = "2" }
-log = { version = "0.4.21" }
-env_logger = { version = "0.11.3", features = ["color"]}
-
-home-config = { version = "0.6.0", features = ["json", "yaml", "toml"] }
-clap = { version = "4.5.2", features = ["derive", "cargo"] }
-
-dirs = { version = "5.0.1" }
-rumqttc = { version = "0.24.0" }
-cuid = { version = "1.3.2" }
-uuid = { version = "1.7.0", features = [
-  "v4",
-  "fast-rng",
-  "macro-diagnostics",
-  "serde",
-] }
 shadow-rs = "0.27.1"
-dotenvy = "0.15.7"
-mac_address = "1.1.5"
+thiserror = "1.0.58"
+tokio = { version = "1.36.0", features = ["full"] }
+uuid = { version = "1.7.0", features = [
+    "fast-rng",
+    "macro-diagnostics",
+    "serde",
+    "v4",
+] }
 zip-extract = "0.1.3"
 
-anyhow = "1.0.81"
-thiserror = "1.0.58"
-
 [dev-dependencies]
+nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0" }
 rstest = { version = "0.18.2" }
-nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.0"}
 
 [build-dependencies]
 shadow-rs = "0.27.1"
 
 [profile.dev]
-panic = "abort"
 debug = true
+panic = "abort"
 
 [profile.test]
-panic = "abort"
-opt-level = 3
 debug = true
+opt-level = 3
+panic = "abort"
 
 [profile.release]
 panic = "abort"
