@@ -1,0 +1,24 @@
+allow-unwrap-in-tests = true
+avoid-breaking-exported-api = false
+max-fn-params-bools = 2
+
+# https://rust-lang.github.io/rust-clippy/master/index.html#/large_include_file
+max-include-file-size = 1000000
+
+# https://rust-lang.github.io/rust-clippy/master/index.html#/type_complexity
+type-complexity-threshold = 350
+
+# https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_methods
+disallowed-macros = [
+    'dbg',
+    'std::eprint',
+    'std::eprintln',
+    'std::print',
+    # 'std::println', # shadow-rs reacted this
+]
+
+# https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_names
+disallowed-names = []
+
+# https://rust-lang.github.io/rust-clippy/master/index.html#disallowed_types
+disallowed-types = []
