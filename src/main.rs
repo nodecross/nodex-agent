@@ -170,7 +170,7 @@ async fn main() -> std::io::Result<()> {
 
     let transfer_client = Box::new(MqttClient::new(tx));
 
-    let server = server::new_server(&sock_path, transfer_client);
+    let server = server::new_server(sock_path.to_str().unwrap(), transfer_client);
     let server_handle = server.handle();
 
     let shutdown_notify = Arc::new(Notify::new());

@@ -1,13 +1,12 @@
 use crate::{controllers, handlers::TransferClient};
 use actix_web::{dev::Server, middleware, web, App, HttpServer};
-use std::path::PathBuf;
 use tokio::sync::Mutex as TokioMutex;
 
 pub struct Context {
     pub sender: TokioMutex<Box<dyn TransferClient>>,
 }
 
-pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Server {
+pub fn new_server(addr: &str, sender: Box<dyn TransferClient>) -> Server {
     let context = web::Data::new(Context {
         sender: TokioMutex::new(sender),
     });
@@ -109,7 +108,7 @@ pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Serve
                     ),
             )
     })
-    .bind_uds(sock_path)
+    .bind(addr)
     .unwrap()
     .workers(1)
     .run()
