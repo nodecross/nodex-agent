@@ -1,4 +1,5 @@
 pub mod didcomm_message_usecase;
+pub mod metric_usecase;
 pub mod verifiable_message_usecase;
 
 fn get_my_did() -> String {

@@ -1,4 +1,5 @@
 use crate::repository::message_activity_repository::MessageActivityHttpError;
+use crate::repository::metric_repository::{MetricStoreRepository, MetricStoreRequest};
 use crate::server_config;
 use crate::{
     nodex::utils::hub_client::{HubClient, HubClientConfig},
@@ -319,6 +320,31 @@ impl MessageActivityRepository for Hub {
                 "StatusCode={}, unexpected response",
                 other
             ))),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl MetricStoreRepository for Hub {
+    async fn save(&self, request: MetricStoreRequest) -> anyhow::Result<()> {
+        let payload = serde_json::to_string(&request).expect("failed to serialize");
+        let res = self.http_client.post("/v1/metric", &payload).await?;
+
+        let status = res.status();
+        let json: Value = res.json().await.context("Failed to read response body")?;
+        let message = if let Some(message) = json.get("message").map(|v| v.to_string()) {
+            message
+        } else {
+            "".to_string()
+        };
+
+        match status {
+            reqwest::StatusCode::OK => Ok(()),
+            reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
+                anyhow::bail!("StatusCode=500, {}", message);
+            }
+            other => anyhow::bail!("StatusCode={other}, {}", message),
         }
     }
 }
