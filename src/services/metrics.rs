@@ -63,3 +63,41 @@ impl MetricWatchRepository for MetricsWatchService {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::metric_repository::MetricWatchRepository;
+
+    #[test]
+    fn test_watch_cpu_usage() {
+        let mut service = MetricsWatchService::new();
+        let cpu_usage = service.watch_cpu_usage();
+        assert!(cpu_usage >= 0.0);
+    }
+
+    #[test]
+    fn test_watch_memory_usage() {
+        let mut service = MetricsWatchService::new();
+        let memory_usage = service.watch_memory_usage();
+        assert!(memory_usage >= 0.0);
+    }
+
+    #[test]
+    fn test_watch_network_info() {
+        let mut service = MetricsWatchService::new();
+        let network_info = service.watch_network_info();
+        assert!(network_info.received_bytes >= 0.0);
+        assert!(network_info.transmitted_bytes >= 0.0);
+        assert!(network_info.recceived_packets >= 0.0);
+        assert!(network_info.transmitted_packets >= 0.0);
+    }
+
+    #[test]
+    fn test_watch_disk_info() {
+        let mut service = MetricsWatchService::new();
+        let disk_info = service.watch_disk_info();
+        assert!(disk_info.read_bytes >= 0.0);
+        assert!(disk_info.written_bytes >= 0.0);
+    }
+}

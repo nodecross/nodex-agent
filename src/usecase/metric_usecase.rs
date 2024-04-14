@@ -66,3 +66,60 @@ impl MetricUsecase {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::metric_repository::{
+        DiskMetrics, MetricStoreRepository, MetricWatchRepository, NetworkMetrics,
+    };
+
+    pub struct MockMetricStoreRepository {}
+
+    #[async_trait::async_trait]
+    impl MetricStoreRepository for MockMetricStoreRepository {
+        async fn save(&self, _: MetricStoreRequest) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
+
+    pub struct MockMetricWatchRepository {}
+
+    impl MetricWatchRepository for MockMetricWatchRepository {
+        fn watch_cpu_usage(&mut self) -> f32 {
+            0.0
+        }
+
+        fn watch_memory_usage(&mut self) -> f32 {
+            0.0
+        }
+
+        fn watch_network_info(&mut self) -> NetworkMetrics {
+            NetworkMetrics {
+                received_bytes: 0.0,
+                transmitted_bytes: 0.0,
+                recceived_packets: 0.0,
+                transmitted_packets: 0.0,
+            }
+        }
+
+        fn watch_disk_info(&mut self) -> DiskMetrics {
+            DiskMetrics {
+                read_bytes: 0.0,
+                written_bytes: 0.0,
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_start_collect_metric() {
+        let mut usecase = MetricUsecase {
+            store_repository: Box::new(MockMetricStoreRepository {}),
+            watch_repository: Box::new(MockMetricWatchRepository {}),
+            should_stop: Arc::new(AtomicBool::new(false)),
+        };
+
+        usecase.should_stop.store(true, Ordering::Relaxed);
+        usecase.start_collect_metric().await;
+    }
+}
