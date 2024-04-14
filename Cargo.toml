@@ -54,7 +54,7 @@ k256 = { version = "0.13.3", features = [
 ] }
 hmac = { version = "0.12.1" }
 scrypt = { version = "0.11.0", features = ["simple"] }
-aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-siv-v0.11.0-pre" }
+aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-siv-v0.11.1" }
 getrandom = { version = "0.2" }
 
 didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.0" }
