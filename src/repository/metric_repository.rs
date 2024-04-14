@@ -16,10 +16,10 @@ pub struct DiskMetrics {
 }
 
 pub trait MetricWatchRepository {
-    fn watch_cpu_usage(&mut self) -> f32;
-    fn watch_memory_usage(&mut self) -> f32;
-    fn watch_network_info(&mut self) -> NetworkMetrics;
-    fn watch_disk_info(&mut self) -> DiskMetrics;
+    fn cpu_usage(&mut self) -> f32;
+    fn memory_usage(&mut self) -> f32;
+    fn network_info(&mut self) -> NetworkMetrics;
+    fn disk_info(&mut self) -> DiskMetrics;
 }
 
 #[derive(Debug, Serialize, Clone)]

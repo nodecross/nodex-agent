@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 pub struct MetricUsecase {
     store_repository: Box<dyn MetricStoreRepository + Send + Sync + 'static>,
-    watch_repository: Box<dyn MetricWatchRepository + Send + Sync + 'static>,
+    repository: Box<dyn MetricWatchRepository + Send + Sync + 'static>,
     should_stop: Arc<AtomicBool>,
 }
 
@@ -16,12 +16,12 @@ impl MetricUsecase {
     pub fn new(should_stop: Arc<AtomicBool>) -> Self {
         MetricUsecase {
             store_repository: Box::new(Hub::new()),
-            watch_repository: Box::new(MetricsWatchService::new()),
+            repository: Box::new(MetricsWatchService::new()),
             should_stop,
         }
     }
 
-    async fn send_request(&self, metric_name: &str, metric_value: f32) -> () {
+    async fn send_request(&self, metric_name: &str, metric_value: f32) {
         let request = MetricStoreRequest {
             device_did: super::get_my_did(),
             timestamp: chrono::Utc::now().naive_utc(),
@@ -37,13 +37,13 @@ impl MetricUsecase {
 
     pub async fn start_collect_metric(&mut self) {
         while !self.should_stop.load(Ordering::Relaxed) {
-            let cpu_usage = self.watch_repository.watch_cpu_usage();
+            let cpu_usage = self.repository.cpu_usage();
             self.send_request("cpu_usage", cpu_usage).await;
 
-            let memory_usage = self.watch_repository.watch_memory_usage();
+            let memory_usage = self.repository.memory_usage();
             self.send_request("memory_usage", memory_usage).await;
 
-            let network_info = self.watch_repository.watch_network_info();
+            let network_info = self.repository.network_info();
             self.send_request("network_received_bytes", network_info.received_bytes)
                 .await;
             self.send_request("network_transmitted_bytes", network_info.transmitted_bytes)
@@ -56,7 +56,7 @@ impl MetricUsecase {
             )
             .await;
 
-            let disk_info = self.watch_repository.watch_disk_info();
+            let disk_info = self.repository.disk_info();
             self.send_request("disk_written_bytes", disk_info.written_bytes)
                 .await;
             self.send_request("disk_read_bytes", disk_info.read_bytes)
@@ -86,15 +86,15 @@ mod tests {
     pub struct MockMetricWatchRepository {}
 
     impl MetricWatchRepository for MockMetricWatchRepository {
-        fn watch_cpu_usage(&mut self) -> f32 {
+        fn cpu_usage(&mut self) -> f32 {
             0.0
         }
 
-        fn watch_memory_usage(&mut self) -> f32 {
+        fn memory_usage(&mut self) -> f32 {
             0.0
         }
 
-        fn watch_network_info(&mut self) -> NetworkMetrics {
+        fn network_info(&mut self) -> NetworkMetrics {
             NetworkMetrics {
                 received_bytes: 0.0,
                 transmitted_bytes: 0.0,
@@ -103,7 +103,7 @@ mod tests {
             }
         }
 
-        fn watch_disk_info(&mut self) -> DiskMetrics {
+        fn disk_info(&mut self) -> DiskMetrics {
             DiskMetrics {
                 read_bytes: 0.0,
                 written_bytes: 0.0,
@@ -115,7 +115,7 @@ mod tests {
     async fn test_start_collect_metric() {
         let mut usecase = MetricUsecase {
             store_repository: Box::new(MockMetricStoreRepository {}),
-            watch_repository: Box::new(MockMetricWatchRepository {}),
+            repository: Box::new(MockMetricWatchRepository {}),
             should_stop: Arc::new(AtomicBool::new(false)),
         };
 
