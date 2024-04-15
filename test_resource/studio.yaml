@@ -137,6 +137,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /v1/metric:
+    post:
+      summary: Register a device metric
+      operationId: registerDeviceMetric
+      tags:
+        - metric
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceMetricRequest"
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:
@@ -235,3 +259,23 @@ components:
           type: string
         message:
           type: string
+
+    DeviceMetricRequest:
+      type: object
+      required:
+        - device_did
+        - timestamp
+        - metric_name
+        - metric_value
+      properties:
+        device_did:
+          type: string
+        metric_name:
+          type: string
+        metric_value:
+          type: number
+          format: float
+        timestamp:
+          type: string
+          example: "2021-07-01T00:00:00Z"
+          format: date-time
