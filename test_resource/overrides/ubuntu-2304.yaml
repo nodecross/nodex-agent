@@ -1,3 +1,0 @@
-services:
-  e2e_agent:
-    image: ubuntu:23.04

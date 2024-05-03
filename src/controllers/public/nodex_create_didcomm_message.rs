@@ -2,7 +2,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::{services::hub::Hub, usecase::didcomm_message_usecase::DidcommMessageUseCase};
+use crate::{services::studio::Studio, usecase::didcomm_message_usecase::DidcommMessageUseCase};
 use crate::{
     services::{
         internal::{did_vc::DIDVCService, didcomm_encrypted::DIDCommEncryptedService},
@@ -28,7 +28,7 @@ pub async fn handler(
 
     let usecase = DidcommMessageUseCase::new(
         ProjectVerifierImplOnNetworkConfig::new(),
-        Hub::new(),
+        Studio::new(),
         DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new())),
     );
 

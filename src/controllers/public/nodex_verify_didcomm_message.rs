@@ -7,7 +7,7 @@ use crate::services::{
     project_verifier::ProjectVerifierImplOnNetworkConfig,
 };
 use crate::{
-    services::{hub::Hub, internal::didcomm_encrypted::DIDCommEncryptedService},
+    services::{internal::didcomm_encrypted::DIDCommEncryptedService, studio::Studio},
     usecase::didcomm_message_usecase::{DidcommMessageUseCase, VerifyDidcommMessageUseCaseError},
 };
 
@@ -25,7 +25,7 @@ pub async fn handler(
 
     let usecase = DidcommMessageUseCase::new(
         ProjectVerifierImplOnNetworkConfig::new(),
-        Hub::new(),
+        Studio::new(),
         DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new())),
     );
 

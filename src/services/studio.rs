@@ -1,7 +1,7 @@
 use crate::repository::message_activity_repository::MessageActivityHttpError;
 use crate::server_config;
 use crate::{
-    nodex::utils::hub_client::{HubClient, HubClientConfig},
+    nodex::utils::studio_client::{StudioClient, StudioClientConfig},
     repository::message_activity_repository::{
         CreatedMessageActivityRequest, MessageActivityRepository, VerifiedMessageActivityRequest,
     },
@@ -31,8 +31,8 @@ struct ErrorResponse {
     pub message: String,
 }
 
-pub struct Hub {
-    http_client: HubClient,
+pub struct Studio {
+    http_client: StudioClient,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,14 +58,14 @@ pub struct NetworkResponse {
     pub heartbeat: u64,
 }
 
-impl Hub {
+impl Studio {
     pub fn new() -> Self {
         let server_config = server_config();
-        let client_config: HubClientConfig = HubClientConfig {
+        let client_config: StudioClientConfig = StudioClientConfig {
             base_url: server_config.hub_http_endpoint(),
         };
 
-        let client = match HubClient::new(&client_config) {
+        let client = match StudioClient::new(&client_config) {
             Ok(v) => v,
             Err(e) => {
                 log::error!("{:?}", e);
@@ -73,7 +73,7 @@ impl Hub {
             }
         };
 
-        Hub {
+        Studio {
             http_client: client,
         }
     }
@@ -222,7 +222,7 @@ impl Hub {
 }
 
 #[async_trait::async_trait]
-impl MessageActivityRepository for Hub {
+impl MessageActivityRepository for Studio {
     async fn add_create_activity(
         &self,
         request: CreatedMessageActivityRequest,

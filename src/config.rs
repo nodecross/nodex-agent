@@ -411,7 +411,7 @@ impl ServerConfig {
             env::var("NODEX_DID_HTTP_ENDPOINT").unwrap_or("https://did.nodecross.io".to_string());
         let link =
             env::var("NODEX_DID_ATTACHMENT_LINK").unwrap_or("https://did.getnodex.io".to_string());
-        let hub_endpoint = env::var("NODEX_HUB_HTTP_ENDPOINT")
+        let hub_endpoint = env::var("NODEX_STUDIO_HTTP_ENDPOINT")
             .unwrap_or("https://http.hub.nodecross.io".to_string());
 
         ServerConfig {

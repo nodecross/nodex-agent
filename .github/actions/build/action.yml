@@ -24,6 +24,10 @@ runs:
       if: ${{ inputs.use-cache == 'true' }}
       uses: Swatinem/rust-cache@v2
 
+    - name: add toolchain
+      shell: bash
+      run: rustup target add ${{ inputs.target }}
+
     - name: (run) build
       shell: bash
       run: cargo build --release --target ${{ inputs.target }}

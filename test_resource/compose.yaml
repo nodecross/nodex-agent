@@ -1,14 +1,14 @@
-version: '3.9'
+version: "3.9"
 
 services:
   sidetree_prism:
     image: stoplight/prism:4
-    command: 'mock -h 0.0.0.0 /tmp/api.yaml'
+    command: "mock -h 0.0.0.0 /tmp/api.yaml"
     platform: linux/amd64
     volumes:
       - ./did_sidetree.yaml:/tmp/api.yaml:ro
     ports:
-      - '4010:4010'
+      - "4010:4010"
     healthcheck:
       # this docker image doens't have curl
       test: wget --no-verbose --tries=1 --spider http://localhost:4010/health || exit 1
@@ -19,12 +19,12 @@ services:
 
   studio_prism:
     image: stoplight/prism:4
-    command: 'mock -h 0.0.0.0 /tmp/api.yaml'
+    command: "mock -h 0.0.0.0 /tmp/api.yaml"
     platform: linux/amd64
     volumes:
       - ./studio.yaml:/tmp/api.yaml:ro
     ports:
-      - '8020:4010'
+      - "8020:4010"
     healthcheck:
       # this docker image doens't have curl
       test: wget --no-verbose --tries=1 --spider http://localhost:4010/health || exit 1
@@ -65,7 +65,7 @@ services:
     environment:
       NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
       NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
-      NODEX_HUB_HTTP_ENDPOINT: http://studio_prism:4010
+      NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
       RUST_BACKTRACE: 1
     profiles:
       - e2e
@@ -86,7 +86,7 @@ services:
     environment:
       NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
       NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
-      NODEX_HUB_HTTP_ENDPOINT: http://studio_prism:4010
+      NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
       RUST_BACKTRACE: 1
     profiles:
       - e2e

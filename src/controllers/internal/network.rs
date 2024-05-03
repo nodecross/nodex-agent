@@ -1,4 +1,4 @@
-use crate::services::hub::Hub;
+use crate::services::studio::Studio;
 use actix_web::{web, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,8 +13,8 @@ pub async fn handler(
     _req: HttpRequest,
     web::Json(_): web::Json<MessageContainer>,
 ) -> actix_web::Result<HttpResponse> {
-    let hub = Hub::new();
-    match hub.network().await {
+    let studio = Studio::new();
+    match studio.network().await {
         Ok(_) => Ok(HttpResponse::Ok().json("ok")),
         Err(e) => {
             log::error!("{:?}", e);
