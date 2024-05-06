@@ -44,7 +44,7 @@ struct ConfigNetwork {
     pub secret_key: Option<String>,
     pub project_did: Option<String>,
     pub recipient_dids: Option<Vec<String>>,
-    pub hub_endpoint: Option<String>,
+    pub studio_endpoint: Option<String>,
     pub heartbeat: Option<u64>,
 }
 
@@ -135,13 +135,13 @@ impl Network {
         self.write();
     }
 
-    // NOTE: hub_endpoint
-    pub fn get_hub_endpoint(&self) -> Option<String> {
-        self.root.hub_endpoint.clone()
+    // NOTE: studio_endpoint
+    pub fn get_studio_endpoint(&self) -> Option<String> {
+        self.root.studio_endpoint.clone()
     }
 
-    pub fn save_hub_endpoint(&mut self, value: &str) {
-        self.root.hub_endpoint = Some(value.to_string());
+    pub fn save_studio_endpoint(&mut self, value: &str) {
+        self.root.studio_endpoint = Some(value.to_string());
         self.write();
     }
 

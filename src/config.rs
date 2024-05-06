@@ -396,7 +396,7 @@ impl AppConfig {
 pub struct ServerConfig {
     did_http_endpoint: String,
     did_attachment_link: String,
-    hub_http_endpoint: String,
+    studio_http_endpoint: String,
 }
 
 impl Default for ServerConfig {
@@ -411,13 +411,13 @@ impl ServerConfig {
             env::var("NODEX_DID_HTTP_ENDPOINT").unwrap_or("https://did.nodecross.io".to_string());
         let link =
             env::var("NODEX_DID_ATTACHMENT_LINK").unwrap_or("https://did.getnodex.io".to_string());
-        let hub_endpoint = env::var("NODEX_HUB_HTTP_ENDPOINT")
+        let studio_endpoint = env::var("NODEX_STUDIO_HTTP_ENDPOINT")
             .unwrap_or("https://http.hub.nodecross.io".to_string());
 
         ServerConfig {
             did_http_endpoint: did_endpoint,
             did_attachment_link: link,
-            hub_http_endpoint: hub_endpoint,
+            studio_http_endpoint: studio_endpoint,
         }
     }
     pub fn did_http_endpoint(&self) -> String {
@@ -426,7 +426,7 @@ impl ServerConfig {
     pub fn did_attachment_link(&self) -> String {
         self.did_attachment_link.clone()
     }
-    pub fn hub_http_endpoint(&self) -> String {
-        self.hub_http_endpoint.clone()
+    pub fn studio_http_endpoint(&self) -> String {
+        self.studio_http_endpoint.clone()
     }
 }

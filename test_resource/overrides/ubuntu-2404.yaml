@@ -1,0 +1,3 @@
+services:
+  e2e_agent:
+    image: ubuntu:24.04
