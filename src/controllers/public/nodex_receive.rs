@@ -1,5 +1,5 @@
-use crate::services::{hub::Hub, internal::didcomm_encrypted::DIDCommEncryptedService};
 use crate::services::{internal::did_vc::DIDVCService, nodex::NodeX};
+use crate::services::{internal::didcomm_encrypted::DIDCommEncryptedService, studio::Studio};
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
@@ -17,7 +17,7 @@ struct AckMessage {
 }
 
 struct MessageReceiveUsecase {
-    hub: Hub,
+    studio: Studio,
     agent: NodeX,
     project_did: String,
 }
@@ -34,7 +34,7 @@ impl MessageReceiveUsecase {
         drop(network);
 
         Self {
-            hub: Hub::new(),
+            studio: Studio::new(),
             agent: NodeX::new(),
             project_did,
         }
@@ -44,7 +44,7 @@ impl MessageReceiveUsecase {
         // TODO: refactoring more simple
         let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
 
-        for m in self.hub.get_message(&self.project_did).await? {
+        for m in self.studio.get_message(&self.project_did).await? {
             let json_message = serde_json::from_str(&m.raw_message)
                 .map_err(|e| anyhow::anyhow!("Invalid Json: {:?}", e))?;
             log::info!("Receive message. message_id = {:?}", m.id);
@@ -66,11 +66,15 @@ impl MessageReceiveUsecase {
                                 self.agent
                                     .update_version(binary_url, "/tmp/nodex-agent")
                                     .await?;
-                                self.hub.ack_message(&self.project_did, m.id, true).await?;
+                                self.studio
+                                    .ack_message(&self.project_did, m.id, true)
+                                    .await?;
                             }
                             Ok(OperationType::UpdateNetworkJson) => {
-                                self.hub.network().await?;
-                                self.hub.ack_message(&self.project_did, m.id, true).await?;
+                                self.studio.network().await?;
+                                self.studio
+                                    .ack_message(&self.project_did, m.id, true)
+                                    .await?;
                             }
                             Err(e) => {
                                 log::error!("Json Parse Error: {:?}", e);
@@ -83,7 +87,9 @@ impl MessageReceiveUsecase {
                 }
                 Err(_) => {
                     log::error!("Verify failed : message_id = {}", m.id);
-                    self.hub.ack_message(&self.project_did, m.id, false).await?;
+                    self.studio
+                        .ack_message(&self.project_did, m.id, false)
+                        .await?;
                     continue;
                 }
             }

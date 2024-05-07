@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
-serde_json = { version = "1.0.115" }
+serde_json = { version = "1.0.116" }
 anyhow = "1.0"
 dirs = "5.0.1"
 hex = "0.4"

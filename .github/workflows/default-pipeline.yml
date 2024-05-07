@@ -92,7 +92,7 @@ jobs:
     steps:
       - name: (checkout) source code
         uses: actions/checkout@v4
-      
+
       # https://github.com/Homebrew/homebrew-core/issues/165793
       # github actions overwrites brew's python. Force it to reassert itself, by running in a separate step.
       - name: unbreak python in github actions
@@ -147,7 +147,7 @@ jobs:
           [
             ubuntu-2004,
             ubuntu-2204,
-            ubuntu-2304,
+            ubuntu-2404,
             debian-bookworm,
             debian-bullseye,
             debian-buster,

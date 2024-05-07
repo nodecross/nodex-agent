@@ -7,8 +7,8 @@ use handlers::Command;
 use handlers::MqttClient;
 use mac_address::get_mac_address;
 use rumqttc::{AsyncClient, MqttOptions, QoS};
-use services::hub::Hub;
 use services::nodex::NodeX;
+use services::studio::Studio;
 use shadow_rs::shadow;
 use std::env;
 use std::{collections::HashMap, fs, sync::Arc};
@@ -88,7 +88,7 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "info");
     log_init();
 
-    let hub_did_topic = "nodex/did:nodex:test:EiCW6eklabBIrkTMHFpBln7574xmZlbMakWSCNtBWcunDg";
+    let studio_did_topic = "nodex/did:nodex:test:EiCW6eklabBIrkTMHFpBln7574xmZlbMakWSCNtBWcunDg";
 
     {
         let config = app_config();
@@ -138,8 +138,8 @@ async fn main() -> std::io::Result<()> {
         false => (),
     }
 
-    // NOTE: hub initilize
-    hub_initialize(device_did.did_document.id.clone()).await;
+    // NOTE: studio initilize
+    studio_initialize(device_did.did_document.id.clone()).await;
     send_device_info().await;
 
     let sock_path = runtime_dir.clone().join("nodex.sock");
@@ -159,10 +159,10 @@ async fn main() -> std::io::Result<()> {
     let (client, _eventloop) = AsyncClient::new(mqtt_options, 10);
 
     client
-        .subscribe(hub_did_topic, QoS::ExactlyOnce)
+        .subscribe(studio_did_topic, QoS::ExactlyOnce)
         .await
         .unwrap();
-    log::info!("subscribed: {}", hub_did_topic);
+    log::info!("subscribed: {}", studio_did_topic);
 
     // NOTE: booting...
     let (tx, rx) = mpsc::channel::<Command>(32);
@@ -279,7 +279,7 @@ fn use_cli(command: Option<Commands>, did: String) {
     }
 }
 
-async fn hub_initialize(my_did: String) {
+async fn studio_initialize(my_did: String) {
     let project_did = {
         let network = network_config();
         let network_config = network.lock();
@@ -298,8 +298,8 @@ async fn hub_initialize(my_did: String) {
     };
 
     // NOTE: register device
-    let hub = Hub::new();
-    match hub.register_device(my_did, project_did).await {
+    let studio = Studio::new();
+    match studio.register_device(my_did, project_did).await {
         Ok(()) => (),
         Err(e) => {
             log::error!("{:?}", e);
@@ -321,8 +321,8 @@ async fn send_device_info() {
         .get_project_did()
         .expect("Failed to get project_did");
 
-    let hub = Hub::new();
-    match hub
+    let studio = Studio::new();
+    match studio
         .send_device_info(
             project_did,
             mac_address,

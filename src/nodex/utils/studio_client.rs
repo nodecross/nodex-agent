@@ -15,24 +15,24 @@ use serde_json::json;
 
 type HmacSha256 = Hmac<Sha256>;
 
-pub struct HubClientConfig {
+pub struct StudioClientConfig {
     pub base_url: String,
 }
 
-pub struct HubClient {
+pub struct StudioClient {
     pub base_url: Url,
     pub instance: reqwest::Client,
     pub service: DIDCommEncryptedService,
 }
 
-impl HubClient {
-    pub fn new(_config: &HubClientConfig) -> anyhow::Result<Self> {
+impl StudioClient {
+    pub fn new(_config: &StudioClientConfig) -> anyhow::Result<Self> {
         let url = Url::parse(&_config.base_url.to_string())?;
         let client: reqwest::Client = reqwest::Client::new();
         let service: DIDCommEncryptedService =
             DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
 
-        Ok(HubClient {
+        Ok(StudioClient {
             instance: client,
             base_url: url,
             service,
@@ -188,11 +188,11 @@ pub mod tests {
     #[actix_rt::test]
     #[ignore]
     async fn it_should_success_get() {
-        let client_config: HubClientConfig = HubClientConfig {
+        let client_config: StudioClientConfig = StudioClientConfig {
             base_url: "https://httpbin.org".to_string(),
         };
 
-        let client = match HubClient::new(&client_config) {
+        let client = match StudioClient::new(&client_config) {
             Ok(v) => v,
             Err(_) => panic!(),
         };
@@ -213,11 +213,11 @@ pub mod tests {
     #[actix_rt::test]
     #[ignore]
     async fn it_should_success_post() {
-        let client_config: HubClientConfig = HubClientConfig {
+        let client_config: StudioClientConfig = StudioClientConfig {
             base_url: "https://httpbin.org".to_string(),
         };
 
-        let client = match HubClient::new(&client_config) {
+        let client = match StudioClient::new(&client_config) {
             Ok(v) => v,
             Err(_) => panic!(),
         };
@@ -238,11 +238,11 @@ pub mod tests {
     #[actix_rt::test]
     #[ignore]
     async fn it_should_success_put() {
-        let client_config: HubClientConfig = HubClientConfig {
+        let client_config: StudioClientConfig = StudioClientConfig {
             base_url: "https://httpbin.org".to_string(),
         };
 
-        let client = match HubClient::new(&client_config) {
+        let client = match StudioClient::new(&client_config) {
             Ok(v) => v,
             Err(_) => panic!(),
         };
@@ -263,11 +263,11 @@ pub mod tests {
     #[actix_rt::test]
     #[ignore]
     async fn it_should_success_delete() {
-        let client_config: HubClientConfig = HubClientConfig {
+        let client_config: StudioClientConfig = StudioClientConfig {
             base_url: "https://httpbin.org".to_string(),
         };
 
-        let client = match HubClient::new(&client_config) {
+        let client = match StudioClient::new(&client_config) {
             Ok(v) => v,
             Err(_) => panic!(),
         };
