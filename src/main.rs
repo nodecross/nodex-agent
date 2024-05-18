@@ -6,18 +6,22 @@ use dotenvy::dotenv;
 use handlers::Command;
 use handlers::MqttClient;
 use mac_address::get_mac_address;
+use repository::metric_repository::{
+    Metric, MetricCollectRepositoryImpl, MetricFileStoreRepository, MetricInmemoryStoreRepository,
+    MetricSendRepositoryImpl,
+};
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use services::nodex::NodeX;
 use services::studio::Studio;
 use shadow_rs::shadow;
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::{collections::HashMap, fs, sync::Arc};
 use tokio::sync::mpsc;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 use tokio::time::Duration;
-use usecase::metric_usecase::MetricUsecase;
+use usecase::metric_collector_usecase::MetricCollectorUsecase;
+use usecase::metric_sender_usecase::MetricSenderUsecase;
 
 mod config;
 mod controllers;
@@ -166,14 +170,6 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
     log::info!("subscribed: {}", studio_did_topic);
 
-    let should_stop = Arc::new(AtomicBool::new(false));
-
-    let mut metric_usecase = MetricUsecase::new(should_stop.clone());
-    tokio::spawn(async move {
-        metric_usecase.start_collect_metric().await;
-        log::info!("Metric usecase has been successfully stopped.");
-    });
-
     // NOTE: booting...
     let (tx, rx) = mpsc::channel::<Command>(32);
     let db = Arc::new(RwLock::new(HashMap::<String, bool>::new()));
@@ -196,8 +192,31 @@ async fn main() -> std::io::Result<()> {
         mqtt_topic,
     ));
 
+    let (metric_sender, metric_receiver) = mpsc::channel::<Metric>(32);
+    let mut metric_collector_usecase = MetricCollectorUsecase::new(
+        Box::new(MetricCollectRepositoryImpl::new()),
+        metric_sender,
+        // TODO: get interval from config
+        15,
+    );
+    let mut metric_sender_usecase = MetricSenderUsecase::new(
+        Box::new(MetricInmemoryStoreRepository::new()),
+        Box::new(MetricFileStoreRepository::new(
+            // TODO: get file path from config
+            logs_dir.join("metrics.json").to_str().unwrap().to_string(),
+        )),
+        Box::new(MetricSendRepositoryImpl::new()),
+        metric_receiver,
+        // TODO: get interval from config
+        60,
+    );
+
+    let metric_collector_task = tokio::spawn(metric_collector_usecase.start_collect());
+    let metric_sender_task =
+        tokio::spawn(metric_sender_usecase.start_send(Arc::clone(&shutdown_notify)));
+
     let shutdown = tokio::spawn(async move {
-        handle_signals(should_stop.clone()).await;
+        handle_signals().await;
 
         let server_stop = server_handle.stop(true);
         shutdown_notify.notify_waiters();
@@ -206,7 +225,14 @@ async fn main() -> std::io::Result<()> {
         log::info!("Agent has been successfully stopped.");
     });
 
-    match tokio::try_join!(server_task, sender_task, message_polling_task, shutdown) {
+    match tokio::try_join!(
+        server_task,
+        sender_task,
+        message_polling_task,
+        metric_collector_task,
+        metric_sender_task,
+        shutdown
+    ) {
         Ok(_) => Ok(()),
         Err(e) => {
             log::error!("{:?}", e);
@@ -216,7 +242,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 #[cfg(unix)]
-async fn handle_signals(should_stop: Arc<AtomicBool>) {
+async fn handle_signals() {
     use tokio::signal::unix::{signal, SignalKind};
 
     let ctrl_c = tokio::signal::ctrl_c();
@@ -225,11 +251,9 @@ async fn handle_signals(should_stop: Arc<AtomicBool>) {
     tokio::select! {
         _ = ctrl_c => {
             log::info!("Received SIGINT");
-            should_stop.store(true, Ordering::Relaxed);
         },
         _ = sigterm.recv() => {
             log::info!("Received SIGTERM");
-            should_stop.store(true, Ordering::Relaxed);
         },
     }
 }
