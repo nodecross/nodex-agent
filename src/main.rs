@@ -263,14 +263,14 @@ fn use_cli(command: Option<Commands>, did: String) {
                 NetworkSubCommands::Set { key, value } => match &*key {
                     SECRET_KEY => {
                         network_config.save_secret_key(&value);
-                        print!("Network {} is set", SECRET_KEY);
+                        log::info!("Network {} is set", SECRET_KEY);
                     }
                     PROJECT_DID => {
                         network_config.save_project_did(&value);
-                        print!("Network {} is set", PROJECT_DID);
+                        log::info!("Network {} is set", PROJECT_DID);
                     }
                     _ => {
-                        print!("key is not found");
+                        log::info!("key is not found");
                     }
                 },
                 NetworkSubCommands::Get { key } => match &*key {
@@ -279,17 +279,17 @@ fn use_cli(command: Option<Commands>, did: String) {
                             println!("Network {}: {}", SECRET_KEY, v);
                             return;
                         };
-                        print!("Network {} is not set", SECRET_KEY);
+                        log::info!("Network {} is not set", SECRET_KEY);
                     }
                     PROJECT_DID => {
                         if let Some(v) = network_config.get_project_did() {
-                            println!("Network {}: {}", PROJECT_DID, v);
+                            log::info!("Network {}: {}", PROJECT_DID, v);
                             return;
                         };
-                        print!("Network {} is not set", PROJECT_DID);
+                        log::info!("Network {} is not set", PROJECT_DID);
                     }
                     _ => {
-                        print!("key is not found");
+                        log::info!("key is not found");
                     }
                 },
             },

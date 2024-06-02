@@ -81,6 +81,6 @@ mod tests {
         assert!(result.is_ok());
         let result = result.unwrap();
         let result = project_verifier.verify_project_hmac(&result).unwrap();
-        assert_eq!(result, true);
+        assert!(result);
     }
 }

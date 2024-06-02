@@ -1,7 +1,6 @@
 pub mod aes_gcm_siv;
 pub mod base64_url;
 pub mod bip32;
-pub mod hmac;
 pub mod jcs;
 pub mod multihash;
 pub mod random;

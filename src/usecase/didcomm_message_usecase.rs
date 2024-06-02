@@ -154,7 +154,7 @@ impl DidcommMessageUseCase {
             .verify(&message)
             .await
             .map_err(|e| {
-                dbg!(&e);
+                log::debug!("{}", &e);
                 match e {
                     DIDCommEncryptedServiceError::DIDNotFound(d) => {
                         VerifyDidcommMessageUseCaseError::TargetDidNotFound(d)
@@ -444,9 +444,8 @@ mod tests {
 
             let destination_did = get_my_did();
             let message = "Hello".to_string();
-
             let now = Utc::now();
-            let generated = usecase
+            usecase
                 .generate(
                     destination_did.clone(),
                     message.clone(),
@@ -454,9 +453,7 @@ mod tests {
                     now,
                 )
                 .await
-                .unwrap();
-
-            generated
+                .unwrap()
         }
 
         #[tokio::test]

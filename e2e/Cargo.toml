@@ -1,12 +1,11 @@
 [package]
+edition = "2021"
 name = "e2e"
 version = "1.0.0"
-edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
-serde_json = { version = "1.0.116" }
 anyhow = "1.0"
 dirs = "5.0.1"
 hex = "0.4"
@@ -17,10 +16,11 @@ hyper-util = { version = "0.1.3", features = [
     "http1",
     "tokio",
 ] }
+hyperlocal = { git = "https://github.com/softprops/hyperlocal.git", rev = "34dc857" }
+serde_json = { version = "1.0.116" }
 tokio = { version = "1.36", features = [
     "io-std",
     "io-util",
     "macros",
     "rt-multi-thread",
 ] }
-hyperlocal = { git = "https://github.com/softprops/hyperlocal.git", rev = "34dc857" }
