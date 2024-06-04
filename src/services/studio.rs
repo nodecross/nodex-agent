@@ -10,6 +10,7 @@ use crate::{
 
 use anyhow::Context;
 
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -354,10 +355,20 @@ impl MetricStoreRepository for Studio {
             })
             .collect::<Vec<MetricsWithTimestampStr>>();
 
-        let vc =
-            DIDVCService::new(NodeX::new()).generate(&json!(metrics_str), chrono::Utc::now())?;
+        let message = json!(metrics_str);
 
-        let payload = serde_json::to_string(&vc).context("failed to serialize")?;
+        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
+
+        let project_did = {
+            let network = crate::network_config();
+            let network = network.lock();
+            network.get_project_did().expect("project_did is not set")
+        };
+        let payload = service
+            .generate(&project_did, &json!(message), None, Utc::now())
+            .await
+            .context("failed to generate payload")?;
+        let payload = serde_json::to_string(&payload).context("failed to serialize")?;
 
         let res = self.http_client.post("/v1/metrics", &payload).await?;
 
@@ -368,6 +379,7 @@ impl MetricStoreRepository for Studio {
         } else {
             "".to_string()
         };
+
         match status {
             reqwest::StatusCode::OK => Ok(()),
             reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
