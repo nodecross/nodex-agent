@@ -37,7 +37,6 @@ runs:
         pid=$(docker exec $container_id pgrep -f nodex-agent)
         docker exec $container_id kill -SIGINT $pid
         sleep 3
-      if: ${{ always() }}
 
     - name: (run) Check for 'SIGINT' log message
       shell: bash
@@ -74,7 +73,6 @@ runs:
         pid=$(docker exec $container_id pgrep -f nodex-agent)
         docker exec $container_id kill -SIGTERM $pid
         sleep 3
-      if: ${{ always() }}
 
     - name: (run) Check for 'SIGTERM' log message
       shell: bash

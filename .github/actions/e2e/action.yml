@@ -62,7 +62,6 @@ runs:
       run: |
         pgrep -f nodex-agent | xargs kill -SIGINT
         sleep 3
-      if: ${{ always() }}
 
     - name: (run) Check for 'SIGINT' log message
       shell: bash
@@ -114,7 +113,6 @@ runs:
       run: |
         pgrep -f nodex-agent | xargs kill -SIGTERM
         sleep 3
-      if: ${{ always() }}
 
     - name: (run) Check for 'SIGTERM' log message
       shell: bash
