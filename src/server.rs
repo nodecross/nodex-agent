@@ -68,7 +68,7 @@ pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Serve
                     )
                     .route(
                         "/version/get",
-                        web::post().to(controllers::internal::version::handler_get),
+                        web::get().to(controllers::internal::version::handler_get),
                     )
                     .route(
                         "/version/update",
