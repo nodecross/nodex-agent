@@ -57,3 +57,74 @@ pub trait MessageActivityRepository {
         request: VerifiedMessageActivityRequest,
     ) -> Result<(), MessageActivityHttpError>;
 }
+
+#[cfg(test)]
+pub mod mocks {
+    use super::*;
+
+    pub struct MockMessageActivityRepository {
+        create: Option<bool>,
+        verify: Option<bool>,
+    }
+
+    impl MockMessageActivityRepository {
+        pub fn create_success() -> Self {
+            Self {
+                create: Some(true),
+                verify: None,
+            }
+        }
+
+        pub fn create_fail() -> Self {
+            Self {
+                create: Some(false),
+                verify: None,
+            }
+        }
+
+        pub fn verify_success() -> Self {
+            Self {
+                create: None,
+                verify: Some(true),
+            }
+        }
+
+        pub fn verify_fail() -> Self {
+            Self {
+                create: None,
+                verify: Some(false),
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl MessageActivityRepository for MockMessageActivityRepository {
+        async fn add_create_activity(
+            &self,
+            _request: CreatedMessageActivityRequest,
+        ) -> Result<(), MessageActivityHttpError> {
+            let create = self.create.expect("this method should not be called");
+            if create {
+                Ok(())
+            } else {
+                Err(MessageActivityHttpError::InternalServerError(
+                    "create activity failed".to_string(),
+                ))
+            }
+        }
+
+        async fn add_verify_activity(
+            &self,
+            _request: VerifiedMessageActivityRequest,
+        ) -> Result<(), MessageActivityHttpError> {
+            let verify = self.verify.expect("this method should not be called");
+            if verify {
+                Ok(())
+            } else {
+                Err(MessageActivityHttpError::InternalServerError(
+                    "verify activity failed".to_string(),
+                ))
+            }
+        }
+    }
+}

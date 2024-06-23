@@ -244,118 +244,32 @@ struct EncodedMessage {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::usecase::get_my_did;
-    use crate::{
-        nodex::keyring::keypair::KeyPairingWithConfig,
-        nodex::sidetree::payload::{
-            DIDDocument, DIDResolutionResponse, DidPublicKey, MethodMetadata,
-        },
-        services::project_verifier::ProjectVerifier,
-    };
+    use crate::repository::did_repository::mocks::MockDidRepository;
+    use crate::services::project_verifier::mocks::MockProjectVerifier;
+
+    use crate::usecase::test_util::*;
+    use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
     use serde_json::Value;
-
-    pub struct MockProjectVerifier {}
-
-    impl ProjectVerifier for MockProjectVerifier {
-        fn create_project_hmac(&self) -> anyhow::Result<String> {
-            Ok("mock".to_string())
-        }
-
-        fn verify_project_hmac(&self, _signature: &str) -> anyhow::Result<bool> {
-            Ok(true)
-        }
-    }
-
-    pub struct MockDidRepository {}
-
-    const DEFAULT_DID: &str = "did:nodex:test:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-    #[async_trait::async_trait]
-    impl DidRepository for MockDidRepository {
-        async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-            if KeyPairingWithConfig::load_keyring().is_err() {
-                // DID doesn't matter
-                let mut keyring = KeyPairingWithConfig::create_keyring()?;
-                keyring.save(DEFAULT_DID);
-            }
-
-            self.find_identifier(DEFAULT_DID)
-                .await
-                .and_then(|x| x.context("unreachable"))
-        }
-        async fn find_identifier(
-            &self,
-            did: &str,
-        ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-            // extract from NodeX::create_identifier
-            let jwk = KeyPairingWithConfig::load_keyring()?
-                .get_sign_key_pair()
-                .to_jwk(false)?;
-
-            let response = DIDResolutionResponse {
-                context: "https://www.w3.org/ns/did-resolution/v1".to_string(),
-                did_document: DIDDocument {
-                    id: did.to_string(),
-                    public_key: Some(vec![DidPublicKey {
-                        id: did.to_string() + "#signingKey",
-                        controller: String::new(),
-                        r#type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-                        public_key_jwk: jwk,
-                    }]),
-                    service: None,
-                    authentication: Some(vec!["signingKey".to_string()]),
-                },
-                method_metadata: MethodMetadata {
-                    published: true,
-                    recovery_commitment: None,
-                    update_commitment: None,
-                },
-            };
-
-            Ok(Some(response))
-        }
-    }
-
-    pub struct MockActivityRepository {}
-
-    #[async_trait::async_trait]
-    impl MessageActivityRepository for MockActivityRepository {
-        async fn add_create_activity(
-            &self,
-            _request: CreatedMessageActivityRequest,
-        ) -> Result<(), MessageActivityHttpError> {
-            Ok(())
-        }
-
-        async fn add_verify_activity(
-            &self,
-            _request: VerifiedMessageActivityRequest,
-        ) -> Result<(), MessageActivityHttpError> {
-            Ok(())
-        }
-    }
+    use tests::mocks::MockMessageActivityRepository;
 
     #[tokio::test]
     async fn test_create_and_verify() {
-        // generate local did and keys
-        let repository = MockDidRepository {};
-        let _did = repository.create_identifier().await.unwrap();
-        dbg!(&_did);
+        let presets = TestPresets::default();
+        let repository = presets.create_mock_did_repository();
 
         let usecase = VerifiableMessageUseCase {
-            project_verifier: Box::new(MockProjectVerifier {}),
-            did_repository: Box::new(MockDidRepository {}),
-            message_activity_repository: Box::new(MockActivityRepository {}),
-            vc_service: DIDVCService::new(MockDidRepository {}),
+            project_verifier: Box::new(MockProjectVerifier::create_success()),
+            did_repository: Box::new(repository.clone()),
+            message_activity_repository: Box::new(MockMessageActivityRepository::create_success()),
+            vc_service: DIDVCService::new(repository.clone()),
         };
 
-        let destination_did = get_my_did();
         let message = "Hello".to_string();
 
         let now = Utc::now();
         let generated = usecase
             .generate(
-                destination_did.clone(),
+                presets.to_did.clone(),
                 message.clone(),
                 "test".to_string(),
                 now,
@@ -364,7 +278,6 @@ pub mod tests {
             .unwrap();
 
         let result: Value = serde_json::from_str(&generated).unwrap();
-        dbg!(&result);
 
         let message_id = result["credentialSubject"]["container"]["message_id"]
             .as_str()
@@ -375,11 +288,18 @@ pub mod tests {
             serde_json::json!({
                 "message_id": message_id,
                 "payload": "Hello",
-                "destination_did": destination_did,
+                "destination_did": &presets.to_did,
                 "created_at": now.to_rfc3339(),
                 "project_hmac": "mock"
             })
         );
+
+        let usecase = VerifiableMessageUseCase {
+            project_verifier: Box::new(MockProjectVerifier::verify_success()),
+            did_repository: Box::new(repository.clone()),
+            message_activity_repository: Box::new(MockMessageActivityRepository::verify_success()),
+            vc_service: DIDVCService::new(repository.clone()),
+        };
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
         let encoded_message =
@@ -393,34 +313,23 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_generate_did_not_found() {
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(NotFoundDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::create_success()),
+                did_repository: Box::new(MockDidRepository::empty()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::create_success(),
+                ),
+                vc_service: DIDVCService::new(repository.clone()),
             };
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did, message, "test".to_string(), now)
                 .await;
 
             if let Err(CreateVerifiableMessageUseCaseError::DestinationNotFound) = generated {
@@ -431,30 +340,23 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_generate_create_project_hmac_failed() {
-            struct CreateProjectHmacFailedVerifier {}
-
-            impl ProjectVerifier for CreateProjectHmacFailedVerifier {
-                fn create_project_hmac(&self) -> anyhow::Result<String> {
-                    Err(anyhow::anyhow!("create project hmac failed"))
-                }
-                fn verify_project_hmac(&self, _signature: &str) -> anyhow::Result<bool> {
-                    unreachable!()
-                }
-            }
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(CreateProjectHmacFailedVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::create_failed()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::create_success(),
+                ),
+                vc_service: DIDVCService::new(repository),
             };
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did, message, "test".to_string(), now)
                 .await;
 
             if let Err(CreateVerifiableMessageUseCaseError::Other(_)) = generated {
@@ -465,43 +367,24 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_generate_add_activity_failed() {
-            struct CreateActivityFailedRepository {}
-
-            #[async_trait::async_trait]
-            impl MessageActivityRepository for CreateActivityFailedRepository {
-                async fn add_create_activity(
-                    &self,
-                    _request: CreatedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    Err(MessageActivityHttpError::BadRequest(
-                        "create activity failed".to_string(),
-                    ))
-                }
-
-                async fn add_verify_activity(
-                    &self,
-                    _request: VerifiedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    unreachable!()
-                }
-            }
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(CreateActivityFailedRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::create_success()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(MockMessageActivityRepository::create_fail()),
+                vc_service: DIDVCService::new(repository),
             };
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did, message, "test".to_string(), now)
                 .await;
 
-            if let Err(CreateVerifiableMessageUseCaseError::BadRequest(_)) = generated {
+            if let Err(CreateVerifiableMessageUseCaseError::Other(_)) = generated {
             } else {
                 panic!("unexpected result: {:?}", generated);
             }
@@ -511,21 +394,24 @@ pub mod tests {
     mod verify_failed {
         use super::*;
 
-        async fn create_test_message_for_verify_test() -> String {
+        async fn create_test_message_for_verify_test(preset: &TestPresets) -> String {
+            let repository = preset.create_mock_did_repository();
+
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::create_success()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::create_success(),
+                ),
+                vc_service: DIDVCService::new(repository),
             };
 
-            let destination_did = get_my_did();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
                 .generate(
-                    destination_did.clone(),
+                    preset.to_did.clone(),
                     message.clone(),
                     "test".to_string(),
                     now,
@@ -544,7 +430,7 @@ pub mod tests {
                 serde_json::json!({
                     "message_id": message_id,
                     "payload": "Hello",
-                    "destination_did": destination_did,
+                    "destination_did": &preset.to_did,
                     "created_at": now.to_rfc3339(),
                     "project_hmac": "mock"
                 })
@@ -555,25 +441,21 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_verify_not_addressed_to_me() {
-            // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
-            let destination_did = "did:nodex:test:ILLEGAL".to_string();
-            let message = "Hello".to_string();
+            let generated = create_test_message_for_verify_test(&presets).await;
+
+            let _message = "Hello".to_string();
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::verify_success()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::verify_success(),
+                ),
+                vc_service: DIDVCService::new(repository.clone()),
             };
-
-            let now = Utc::now();
-            let generated = usecase
-                .generate(destination_did, message.clone(), "test".to_string(), now)
-                .await
-                .unwrap();
 
             let verified = usecase.verify(&generated, Utc::now()).await;
 
@@ -585,29 +467,20 @@ pub mod tests {
 
         #[tokio::test]
         async fn test_verify_verify_failed() {
-            // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
-            struct VerifyFailedVerifier {}
-
-            impl ProjectVerifier for VerifyFailedVerifier {
-                fn create_project_hmac(&self) -> anyhow::Result<String> {
-                    Ok("mock".to_string())
-                }
-                fn verify_project_hmac(&self, _signature: &str) -> anyhow::Result<bool> {
-                    Ok(false)
-                }
-            }
+            let generated = create_test_message_for_verify_test(&presets).await;
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(VerifyFailedVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::verify_failed()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::verify_success(),
+                ),
+                vc_service: DIDVCService::new(repository.clone()),
             };
 
-            let generated = create_test_message_for_verify_test().await;
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyVerifiableMessageUseCaseError::VerificationFailed) = verified {
@@ -617,34 +490,21 @@ pub mod tests {
         }
 
         #[tokio::test]
-        async fn test_verify_did_not_found() {
-            // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
+        async fn test_verify_verify_error_throwed() {
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
 
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
+            let generated = create_test_message_for_verify_test(&presets).await;
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(MockActivityRepository {}),
-                vc_service: DIDVCService::new(NotFoundDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::verify_throw_error()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::verify_success(),
+                ),
+                vc_service: DIDVCService::new(repository.clone()),
             };
 
-            let generated = create_test_message_for_verify_test().await;
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyVerifiableMessageUseCaseError::Other(_)) = verified {
@@ -654,36 +514,46 @@ pub mod tests {
         }
 
         #[tokio::test]
-        async fn test_verify_add_activity_failed() {
-            struct VerifyActivityFailedRepository {}
+        async fn test_verify_did_not_found() {
+            let presets = TestPresets::default();
 
-            #[async_trait::async_trait]
-            impl MessageActivityRepository for VerifyActivityFailedRepository {
-                async fn add_create_activity(
-                    &self,
-                    _request: CreatedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    unreachable!()
-                }
-
-                async fn add_verify_activity(
-                    &self,
-                    _request: VerifiedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    Err(MessageActivityHttpError::Other(anyhow::anyhow!(
-                        "add verify activity failed"
-                    )))
-                }
-            }
+            let repository = MockDidRepository::empty();
 
             let usecase = VerifiableMessageUseCase {
-                project_verifier: Box::new(MockProjectVerifier {}),
-                did_repository: Box::new(MockDidRepository {}),
-                message_activity_repository: Box::new(VerifyActivityFailedRepository {}),
-                vc_service: DIDVCService::new(MockDidRepository {}),
+                project_verifier: Box::new(MockProjectVerifier::verify_success()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(
+                    MockMessageActivityRepository::verify_success(),
+                ),
+                vc_service: DIDVCService::new(repository),
             };
 
-            let generated = create_test_message_for_verify_test().await;
+            let generated = create_test_message_for_verify_test(&presets).await;
+            let verified = usecase.verify(&generated, Utc::now()).await;
+
+            if let Err(VerifyVerifiableMessageUseCaseError::VCServiceFailed(
+                DIDVCServiceVerifyError::DIDNotFound(_),
+            )) = verified
+            {
+            } else {
+                panic!("unexpected result: {:?}", verified);
+            }
+        }
+
+        #[tokio::test]
+        async fn test_verify_add_activity_failed() {
+            let presets = TestPresets::default();
+            let repository = presets.create_mock_did_repository();
+
+            let generated = create_test_message_for_verify_test(&presets).await;
+
+            let usecase = VerifiableMessageUseCase {
+                project_verifier: Box::new(MockProjectVerifier::verify_success()),
+                did_repository: Box::new(repository.clone()),
+                message_activity_repository: Box::new(MockMessageActivityRepository::verify_fail()),
+                vc_service: DIDVCService::new(repository.clone()),
+            };
+
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyVerifiableMessageUseCaseError::Other(_)) = verified {

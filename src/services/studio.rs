@@ -1,4 +1,3 @@
-
 use crate::nodex::utils;
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::repository::message_activity_repository::MessageActivityHttpError;
