@@ -1,32 +1,34 @@
+use crate::nodex::utils;
 use crate::{
-    nodex::schema::general::GeneralVcDataModel,
-    repository::{did_repository::DidRepository, message_activity_repository::*},
-    services::{
-        internal::did_vc::{DIDVCService, DIDVCServiceError},
-        project_verifier::ProjectVerifier,
-    },
+    repository::message_activity_repository::*, services::project_verifier::ProjectVerifier,
 };
 use anyhow::Context;
 use chrono::DateTime;
 use chrono::Utc;
+use nodex_didcomm::{
+    did::did_repository::DidRepository,
+    verifiable_credentials::{
+        did_vc::{DIDVCService, DIDVCServiceGenerateError, DIDVCServiceVerifyError},
+        types::VerifiableCredentials,
+    },
+};
 use serde::{Deserialize, Serialize};
-
 use thiserror::Error;
 use uuid::Uuid;
 
-pub struct VerifiableMessageUseCase {
+pub struct VerifiableMessageUseCase<D: DidRepository> {
     project_verifier: Box<dyn ProjectVerifier>,
     did_repository: Box<dyn DidRepository>,
     message_activity_repository: Box<dyn MessageActivityRepository>,
-    vc_service: DIDVCService,
+    vc_service: DIDVCService<D>,
 }
 
-impl VerifiableMessageUseCase {
+impl<D: DidRepository> VerifiableMessageUseCase<D> {
     pub fn new(
         project_verifier: Box<dyn ProjectVerifier>,
         did_repository: Box<dyn DidRepository>,
         message_activity_repository: Box<dyn MessageActivityRepository>,
-        vc_service: DIDVCService,
+        vc_service: DIDVCService<D>,
     ) -> Self {
         Self {
             project_verifier,
@@ -42,7 +44,7 @@ pub enum CreateVerifiableMessageUseCaseError {
     #[error("destination did not found")]
     DestinationNotFound,
     #[error(transparent)]
-    VCServiceFailed(#[from] DIDVCServiceError),
+    VCServiceFailed(#[from] DIDVCServiceGenerateError),
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("unauthorized: {0}")]
@@ -64,7 +66,7 @@ pub enum VerifyVerifiableMessageUseCaseError {
     #[error("This message is not addressed to me")]
     NotAddressedToMe,
     #[error(transparent)]
-    VCServiceFailed(#[from] DIDVCServiceError),
+    VCServiceFailed(#[from] DIDVCServiceVerifyError),
     #[error("bad request: {0}")]
     BadRequest(String),
     #[error("unauthorized: {0}")]
@@ -79,7 +81,7 @@ pub enum VerifyVerifiableMessageUseCaseError {
     Other(#[from] anyhow::Error),
 }
 
-impl VerifiableMessageUseCase {
+impl<D: DidRepository> VerifiableMessageUseCase<D> {
     pub async fn generate(
         &self,
         destination_did: String,
@@ -89,11 +91,12 @@ impl VerifiableMessageUseCase {
     ) -> Result<String, CreateVerifiableMessageUseCaseError> {
         self.did_repository
             .find_identifier(&destination_did)
-            .await?
+            .await
+            .context("unexpected error occurred when find a did")?
             .ok_or(CreateVerifiableMessageUseCaseError::DestinationNotFound)?;
 
         let message_id = Uuid::new_v4();
-        let my_did = super::get_my_did();
+        let my_did = utils::get_my_did();
         let message = EncodedMessage {
             message_id,
             payload: message,
@@ -103,7 +106,9 @@ impl VerifiableMessageUseCase {
         };
 
         let message = serde_json::to_value(message).context("failed to convert to value")?;
-        let vc = DIDVCService::generate(&self.vc_service, &message, now)?;
+        let vc = self
+            .vc_service
+            .generate(&my_did, &utils::get_my_keyring(), &message, now)?;
 
         let result = serde_json::to_string(&vc).context("failed to serialize")?;
 
@@ -146,22 +151,17 @@ impl VerifiableMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<GeneralVcDataModel, VerifyVerifiableMessageUseCaseError> {
-        let vc =
-            serde_json::from_str::<GeneralVcDataModel>(message).context("failed to decode str")?;
-        let from_did = vc.issuer.id.clone();
-
-        // TODO: return GeneralVCDataModel
-        let _ = DIDVCService::verify(&self.vc_service, vc.clone())
-            .await
-            .context("verify failed")?;
-
+    ) -> Result<VerifiableCredentials, VerifyVerifiableMessageUseCaseError> {
+        let vc = serde_json::from_str::<VerifiableCredentials>(message)
+            .context("failed to decode str")?;
+        let vc = self.vc_service.verify(vc).await?;
         let container = vc.clone().credential_subject.container;
 
         let message = serde_json::from_value::<EncodedMessage>(container)
             .context("failed to deserialize to EncodedMessage")?;
 
-        let my_did = super::get_my_did();
+        let from_did = vc.issuer.id.clone();
+        let my_did = utils::get_my_did();
 
         if message.destination_did != my_did {
             return Err(VerifyVerifiableMessageUseCaseError::NotAddressedToMe);
@@ -246,7 +246,7 @@ pub mod tests {
     use super::*;
     use crate::usecase::get_my_did;
     use crate::{
-        nodex::keyring::keypair::KeyPairing,
+        nodex::keyring::keypair::KeyPairingWithConfig,
         nodex::sidetree::payload::{
             DIDDocument, DIDResolutionResponse, DidPublicKey, MethodMetadata,
         },
@@ -273,9 +273,9 @@ pub mod tests {
     #[async_trait::async_trait]
     impl DidRepository for MockDidRepository {
         async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-            if KeyPairing::load_keyring().is_err() {
+            if KeyPairingWithConfig::load_keyring().is_err() {
                 // DID doesn't matter
-                let mut keyring = KeyPairing::create_keyring()?;
+                let mut keyring = KeyPairingWithConfig::create_keyring()?;
                 keyring.save(DEFAULT_DID);
             }
 
@@ -288,7 +288,7 @@ pub mod tests {
             did: &str,
         ) -> anyhow::Result<Option<DIDResolutionResponse>> {
             // extract from NodeX::create_identifier
-            let jwk = KeyPairing::load_keyring()?
+            let jwk = KeyPairingWithConfig::load_keyring()?
                 .get_sign_key_pair()
                 .to_jwk(false)?;
 

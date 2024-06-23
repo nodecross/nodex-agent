@@ -2673,6 +2673,7 @@ dependencies = [
  "log",
  "mac_address",
  "nix 0.28.0",
+ "nodex-didcomm",
  "reqwest",
  "rstest",
  "rumqttc",
@@ -2687,6 +2688,35 @@ dependencies = [
  "uuid",
  "x25519-dalek 2.0.1",
  "zip-extract",
+]
+
+[[package]]
+name = "nodex-didcomm"
+version = "0.1.0"
+source = "git+https://github.com/nodecross/nodex-didcomm?tag=0.1.1#64f2f79554072c2d9bc73178f86989eefbd735b9"
+dependencies = [
+ "anyhow",
+ "arrayref",
+ "async-trait",
+ "chrono",
+ "cuid",
+ "data-encoding",
+ "didcomm-rs",
+ "getrandom 0.2.14",
+ "hdwallet",
+ "hex",
+ "hmac 0.12.1",
+ "http 1.1.0",
+ "ibig",
+ "k256 0.13.3",
+ "libloading",
+ "log",
+ "serde",
+ "serde_jcs",
+ "serde_json",
+ "sha2 0.10.8",
+ "thiserror",
+ "x25519-dalek 2.0.1",
 ]
 
 [[package]]

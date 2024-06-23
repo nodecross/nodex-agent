@@ -1,6 +1,9 @@
-use crate::services::{internal::did_vc::DIDVCService, nodex::NodeX};
-use crate::services::{internal::didcomm_encrypted::DIDCommEncryptedService, studio::Studio};
+use crate::nodex::utils;
+use crate::services::nodex::NodeX;
+use crate::services::studio::Studio;
 use anyhow::anyhow;
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
+
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::Notify;
@@ -42,13 +45,16 @@ impl MessageReceiveUsecase {
 
     pub async fn receive_message(&self) -> anyhow::Result<()> {
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
+        let service = DIDCommEncryptedService::new(NodeX::new(), None);
 
         for m in self.studio.get_message(&self.project_did).await? {
             let json_message = serde_json::from_str(&m.raw_message)
                 .map_err(|e| anyhow::anyhow!("Invalid Json: {:?}", e))?;
             log::info!("Receive message. message_id = {:?}", m.id);
-            match service.verify(&json_message).await {
+            match service
+                .verify(&utils::get_my_keyring(), &json_message)
+                .await
+            {
                 Ok(verified) => {
                     log::info!(
                         "Verify success. message_id = {}, from = {}",

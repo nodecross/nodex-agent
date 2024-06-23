@@ -2,34 +2,44 @@ use anyhow::Context;
 use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    nodex::schema::general::GeneralVcDataModel,
+    nodex,
     repository::message_activity_repository::{
         CreatedMessageActivityRequest, MessageActivityHttpError, MessageActivityRepository,
         VerifiedMessageActivityRequest, VerifiedStatus,
     },
-    services::{internal::didcomm_encrypted::*, project_verifier::ProjectVerifier},
+    services::project_verifier::ProjectVerifier,
+};
+use nodex_didcomm::{
+    did::did_repository::DidRepository,
+    didcomm::{
+        encrypted::{
+            DIDCommEncryptedService, DIDCommEncryptedServiceGenerateError,
+            DIDCommEncryptedServiceVerifyError,
+        },
+        types::DIDCommMessage,
+    },
+    verifiable_credentials::types::VerifiableCredentials,
 };
 
-pub struct DidcommMessageUseCase {
+pub struct DidcommMessageUseCase<D: DidRepository> {
     project_verifier: Box<dyn ProjectVerifier + Send + Sync + 'static>,
     message_activity_repository: Box<dyn MessageActivityRepository + Send + Sync + 'static>,
-    didcomm_encrypted_service: DIDCommEncryptedService,
+    didcomm_encrypted_service: DIDCommEncryptedService<D>,
 }
 
-impl DidcommMessageUseCase {
+impl<D: DidRepository> DidcommMessageUseCase<D> {
     pub fn new<
         V: ProjectVerifier + Send + Sync + 'static,
         R: MessageActivityRepository + Send + Sync + 'static,
     >(
         project_verifier: V,
         message_activity_repository: R,
-        didcomm_encrypted_service: DIDCommEncryptedService,
-    ) -> DidcommMessageUseCase {
+        didcomm_encrypted_service: DIDCommEncryptedService<D>,
+    ) -> DidcommMessageUseCase<D> {
         DidcommMessageUseCase {
             project_verifier: Box::new(project_verifier),
             message_activity_repository: Box::new(message_activity_repository),
@@ -76,7 +86,7 @@ pub enum VerifyDidcommMessageUseCaseError {
     Other(#[from] anyhow::Error),
 }
 
-impl DidcommMessageUseCase {
+impl<D: DidRepository> DidcommMessageUseCase<D> {
     pub async fn generate(
         &self,
         destination_did: String,
@@ -85,7 +95,6 @@ impl DidcommMessageUseCase {
         now: DateTime<Utc>,
     ) -> Result<String, GenerateDidcommMessageUseCaseError> {
         let message_id = Uuid::new_v4();
-        let my_did = super::get_my_did();
 
         let message = EncodedMessage {
             message_id,
@@ -94,13 +103,20 @@ impl DidcommMessageUseCase {
             project_hmac: self.project_verifier.create_project_hmac()?,
         };
         let message = serde_json::to_value(message).context("failed to convert to value")?;
-
+        let my_did = "".to_owned();
         let didcomm_message = self
             .didcomm_encrypted_service
-            .generate(&destination_did, &message, None, now)
+            .generate(
+                &nodex::utils::get_my_did(),
+                &destination_did,
+                &nodex::utils::get_my_keyring(),
+                &message,
+                None,
+                now,
+            )
             .await
             .map_err(|e| match e {
-                DIDCommEncryptedServiceError::DIDNotFound(d) => {
+                DIDCommEncryptedServiceGenerateError::DIDNotFound(d) => {
                     GenerateDidcommMessageUseCaseError::TargetDidNotFound(d)
                 }
                 _ => GenerateDidcommMessageUseCaseError::Other(e.into()),
@@ -147,16 +163,17 @@ impl DidcommMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<GeneralVcDataModel, VerifyDidcommMessageUseCaseError> {
-        let message = serde_json::from_str::<Value>(message).context("failed to decode str")?;
+    ) -> Result<VerifiableCredentials, VerifyDidcommMessageUseCaseError> {
+        let message =
+            serde_json::from_str::<DIDCommMessage>(message).context("failed to decode str")?;
         let verified = self
             .didcomm_encrypted_service
-            .verify(&message)
+            .verify(&nodex::utils::get_my_keyring(), &message)
             .await
             .map_err(|e| {
                 log::debug!("{}", &e);
                 match e {
-                    DIDCommEncryptedServiceError::DIDNotFound(d) => {
+                    DIDCommEncryptedServiceVerifyError::DIDNotFound(d) => {
                         VerifyDidcommMessageUseCaseError::TargetDidNotFound(d)
                     }
                     _ => VerifyDidcommMessageUseCaseError::Other(e.into()),

@@ -6,12 +6,10 @@ use crate::{
     services::studio::Studio, usecase::verifiable_message_usecase::VerifiableMessageUseCase,
 };
 use crate::{
-    services::{
-        internal::did_vc::DIDVCService, nodex::NodeX,
-        project_verifier::ProjectVerifierImplOnNetworkConfig,
-    },
+    services::{nodex::NodeX, project_verifier::ProjectVerifierImplOnNetworkConfig},
     usecase::verifiable_message_usecase::VerifyVerifiableMessageUseCaseError,
 };
+use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
 
 // NOTE: POST /verify-verifiable-message
 #[derive(Deserialize, Serialize)]

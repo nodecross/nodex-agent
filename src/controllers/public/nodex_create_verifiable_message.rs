@@ -3,15 +3,14 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    services::studio::Studio, usecase::verifiable_message_usecase::VerifiableMessageUseCase,
-};
-use crate::{
-    services::{
-        internal::did_vc::DIDVCService, nodex::NodeX,
-        project_verifier::ProjectVerifierImplOnNetworkConfig,
-    },
+    services::project_verifier::ProjectVerifierImplOnNetworkConfig,
     usecase::verifiable_message_usecase::CreateVerifiableMessageUseCaseError,
 };
+use crate::{
+    services::{nodex::NodeX, studio::Studio},
+    usecase::verifiable_message_usecase::VerifiableMessageUseCase,
+};
+use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
 
 // NOTE: POST /create-verifiable-message
 #[derive(Deserialize, Serialize)]

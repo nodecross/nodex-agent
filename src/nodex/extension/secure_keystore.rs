@@ -1,4 +1,5 @@
 use std::{ffi::CStr, num::NonZeroU32};
+
 use thiserror::Error;
 
 use crate::{
@@ -32,6 +33,8 @@ pub enum SecureKeyStoreError {
     CStrConvertFailed(#[from] std::str::Utf8Error),
     #[error("Hex decode failed")]
     HexDecodeFailed(#[from] hex::FromHexError),
+    #[error("KeyPair error")]
+    KeyPairError(#[from] nodex_didcomm::keyring::secp256k1::Secp256k1Error),
 }
 
 pub struct SecureKeyStore {}
@@ -52,8 +55,8 @@ impl SecureKeyStore {
         log::info!("Called: write_external (type: {:?})", key_type);
 
         unsafe {
-            let encoded_secret_key = hex::encode(&key_pair.secret_key);
-            let encoded_public_key = hex::encode(&key_pair.public_key);
+            let encoded_secret_key = hex::encode(key_pair.get_secret_key());
+            let encoded_public_key = hex::encode(key_pair.get_public_key());
             let secret_key = [encoded_secret_key.as_bytes(), b"\0"].concat();
             let public_key = [encoded_public_key.as_bytes(), b"\0"].concat();
 
@@ -211,14 +214,12 @@ impl SecureKeyStore {
 
             let secret_key = to_hex_string(secret_key_buffer_ptr as *const core::ffi::c_char)?;
             let public_key = to_hex_string(public_key_buffer_ptr as *const core::ffi::c_char)?;
+            let keypair = KeyPair::new(secret_key, public_key)?;
 
             if let Some(exit_status) = NonZeroU32::new(result) {
                 Err(SecureKeyStoreError::ExternalFunctionFailed(exit_status))
             } else {
-                Ok(Some(KeyPair {
-                    public_key,
-                    secret_key,
-                }))
+                Ok(Some(keypair))
             }
         }
     }
