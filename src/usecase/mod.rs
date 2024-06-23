@@ -8,6 +8,7 @@ mod test_util {
 
     use crate::repository::did_repository::mocks::MockDidRepository;
 
+    #[derive(Clone)]
     pub struct TestPresets {
         pub from_did: String,
         pub from_keyring: KeyPairing,

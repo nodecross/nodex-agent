@@ -2,6 +2,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+use crate::nodex::utils::did_accessor::DIDAccessorImpl;
 use crate::{services::studio::Studio, usecase::didcomm_message_usecase::DidcommMessageUseCase};
 use crate::{
     services::{nodex::NodeX, project_verifier::ProjectVerifierImplOnNetworkConfig},
@@ -27,6 +28,7 @@ pub async fn handler(
         ProjectVerifierImplOnNetworkConfig::new(),
         Studio::new(),
         DIDCommEncryptedService::new(NodeX::new(), None),
+        DIDAccessorImpl {},
     );
 
     match usecase

@@ -1,4 +1,4 @@
-use crate::nodex::utils;
+use crate::nodex::utils::did_accessor::{DIDAccessor, DIDAccessorImpl};
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::repository::message_activity_repository::MessageActivityHttpError;
 use crate::repository::metric_repository::{MetricStoreRepository, MetricsWithTimestamp};
@@ -32,6 +32,7 @@ struct ErrorResponse {
 pub struct Studio {
     http_client: StudioClient,
     didcomm_service: DIDCommEncryptedService<DidRepositoryImpl<SideTreeClient>>,
+    did_accessor: DIDAccessorImpl,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -77,10 +78,12 @@ impl Studio {
         let did_repository = DidRepositoryImpl::new(sidetree_client);
         let didcomm_service =
             DIDCommEncryptedService::new(did_repository, Some(server_config.did_attachment_link()));
+        let did_accessor = DIDAccessorImpl {};
 
         Studio {
             http_client: client,
             didcomm_service,
+            did_accessor,
         }
     }
 
@@ -240,8 +243,8 @@ impl MessageActivityRepository for Studio {
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
 
         let payload = self
             .didcomm_service
@@ -299,8 +302,8 @@ impl MessageActivityRepository for Studio {
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
 
         let payload = self
             .didcomm_service
@@ -384,8 +387,8 @@ impl MetricStoreRepository for Studio {
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
         let payload = self
             .didcomm_service
             .generate(

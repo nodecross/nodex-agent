@@ -1,4 +1,4 @@
-use crate::nodex::utils;
+use crate::nodex::utils::did_accessor::DIDAccessor;
 use crate::{
     repository::message_activity_repository::*, services::project_verifier::ProjectVerifier,
 };
@@ -21,6 +21,7 @@ pub struct VerifiableMessageUseCase<D: DidRepository> {
     did_repository: Box<dyn DidRepository>,
     message_activity_repository: Box<dyn MessageActivityRepository>,
     vc_service: DIDVCService<D>,
+    did_accessor: Box<dyn DIDAccessor>,
 }
 
 impl<D: DidRepository> VerifiableMessageUseCase<D> {
@@ -29,12 +30,14 @@ impl<D: DidRepository> VerifiableMessageUseCase<D> {
         did_repository: Box<dyn DidRepository>,
         message_activity_repository: Box<dyn MessageActivityRepository>,
         vc_service: DIDVCService<D>,
+        did_accessor: Box<dyn DIDAccessor>,
     ) -> Self {
         Self {
             project_verifier,
             did_repository,
             message_activity_repository,
             vc_service,
+            did_accessor,
         }
     }
 }
@@ -96,7 +99,7 @@ impl<D: DidRepository> VerifiableMessageUseCase<D> {
             .ok_or(CreateVerifiableMessageUseCaseError::DestinationNotFound)?;
 
         let message_id = Uuid::new_v4();
-        let my_did = utils::get_my_did();
+        let my_did = self.did_accessor.get_my_did();
         let message = EncodedMessage {
             message_id,
             payload: message,
@@ -106,9 +109,12 @@ impl<D: DidRepository> VerifiableMessageUseCase<D> {
         };
 
         let message = serde_json::to_value(message).context("failed to convert to value")?;
-        let vc = self
-            .vc_service
-            .generate(&my_did, &utils::get_my_keyring(), &message, now)?;
+        let vc = self.vc_service.generate(
+            &my_did,
+            &self.did_accessor.get_my_keyring(),
+            &message,
+            now,
+        )?;
 
         let result = serde_json::to_string(&vc).context("failed to serialize")?;
 
@@ -161,7 +167,7 @@ impl<D: DidRepository> VerifiableMessageUseCase<D> {
             .context("failed to deserialize to EncodedMessage")?;
 
         let from_did = vc.issuer.id.clone();
-        let my_did = utils::get_my_did();
+        let my_did = self.did_accessor.get_my_did();
 
         if message.destination_did != my_did {
             return Err(VerifyVerifiableMessageUseCaseError::NotAddressedToMe);
@@ -244,6 +250,7 @@ struct EncodedMessage {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::nodex::utils::did_accessor::mocks::MockDIDAccessor;
     use crate::repository::did_repository::mocks::MockDidRepository;
     use crate::services::project_verifier::mocks::MockProjectVerifier;
 
@@ -262,6 +269,7 @@ pub mod tests {
             did_repository: Box::new(repository.clone()),
             message_activity_repository: Box::new(MockMessageActivityRepository::create_success()),
             vc_service: DIDVCService::new(repository.clone()),
+            did_accessor: Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
         };
 
         let message = "Hello".to_string();
@@ -299,6 +307,7 @@ pub mod tests {
             did_repository: Box::new(repository.clone()),
             message_activity_repository: Box::new(MockMessageActivityRepository::verify_success()),
             vc_service: DIDVCService::new(repository.clone()),
+            did_accessor: Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
         };
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
@@ -309,6 +318,8 @@ pub mod tests {
     }
 
     mod generate_failed {
+        use crate::nodex::utils::did_accessor::mocks::MockDIDAccessor;
+
         use super::*;
 
         #[tokio::test]
@@ -323,6 +334,10 @@ pub mod tests {
                     MockMessageActivityRepository::create_success(),
                 ),
                 vc_service: DIDVCService::new(repository.clone()),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    presets.from_did,
+                    presets.from_keyring,
+                )),
             };
 
             let message = "Hello".to_string();
@@ -350,6 +365,10 @@ pub mod tests {
                     MockMessageActivityRepository::create_success(),
                 ),
                 vc_service: DIDVCService::new(repository),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    presets.from_did,
+                    presets.from_keyring,
+                )),
             };
 
             let message = "Hello".to_string();
@@ -375,6 +394,10 @@ pub mod tests {
                 did_repository: Box::new(repository.clone()),
                 message_activity_repository: Box::new(MockMessageActivityRepository::create_fail()),
                 vc_service: DIDVCService::new(repository),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    presets.from_did,
+                    presets.from_keyring,
+                )),
             };
 
             let message = "Hello".to_string();
@@ -392,10 +415,12 @@ pub mod tests {
     }
 
     mod verify_failed {
+        use crate::nodex::utils::did_accessor::mocks::MockDIDAccessor;
+
         use super::*;
 
-        async fn create_test_message_for_verify_test(preset: &TestPresets) -> String {
-            let repository = preset.create_mock_did_repository();
+        async fn create_test_message_for_verify_test(presets: TestPresets) -> String {
+            let repository = presets.create_mock_did_repository();
 
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier::create_success()),
@@ -404,6 +429,10 @@ pub mod tests {
                     MockMessageActivityRepository::create_success(),
                 ),
                 vc_service: DIDVCService::new(repository),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    presets.from_did,
+                    presets.from_keyring,
+                )),
             };
 
             let message = "Hello".to_string();
@@ -411,7 +440,7 @@ pub mod tests {
             let now = Utc::now();
             let generated = usecase
                 .generate(
-                    preset.to_did.clone(),
+                    presets.to_did.clone(),
                     message.clone(),
                     "test".to_string(),
                     now,
@@ -430,7 +459,7 @@ pub mod tests {
                 serde_json::json!({
                     "message_id": message_id,
                     "payload": "Hello",
-                    "destination_did": &preset.to_did,
+                    "destination_did": &presets.to_did,
                     "created_at": now.to_rfc3339(),
                     "project_hmac": "mock"
                 })
@@ -444,7 +473,7 @@ pub mod tests {
             let presets = TestPresets::default();
             let repository = presets.create_mock_did_repository();
 
-            let generated = create_test_message_for_verify_test(&presets).await;
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let _message = "Hello".to_string();
 
@@ -455,6 +484,10 @@ pub mod tests {
                     MockMessageActivityRepository::verify_success(),
                 ),
                 vc_service: DIDVCService::new(repository.clone()),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    "wrong_did".to_owned(),
+                    presets.to_keyring,
+                )),
             };
 
             let verified = usecase.verify(&generated, Utc::now()).await;
@@ -470,7 +503,7 @@ pub mod tests {
             let presets = TestPresets::default();
             let repository = presets.create_mock_did_repository();
 
-            let generated = create_test_message_for_verify_test(&presets).await;
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier::verify_failed()),
@@ -479,6 +512,7 @@ pub mod tests {
                     MockMessageActivityRepository::verify_success(),
                 ),
                 vc_service: DIDVCService::new(repository.clone()),
+                did_accessor: Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
             };
 
             let verified = usecase.verify(&generated, Utc::now()).await;
@@ -494,7 +528,7 @@ pub mod tests {
             let presets = TestPresets::default();
             let repository = presets.create_mock_did_repository();
 
-            let generated = create_test_message_for_verify_test(&presets).await;
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier::verify_throw_error()),
@@ -503,6 +537,7 @@ pub mod tests {
                     MockMessageActivityRepository::verify_success(),
                 ),
                 vc_service: DIDVCService::new(repository.clone()),
+                did_accessor: Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
             };
 
             let verified = usecase.verify(&generated, Utc::now()).await;
@@ -526,9 +561,13 @@ pub mod tests {
                     MockMessageActivityRepository::verify_success(),
                 ),
                 vc_service: DIDVCService::new(repository),
+                did_accessor: Box::new(MockDIDAccessor::new(
+                    presets.clone().to_did,
+                    presets.clone().to_keyring,
+                )),
             };
 
-            let generated = create_test_message_for_verify_test(&presets).await;
+            let generated = create_test_message_for_verify_test(presets).await;
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyVerifiableMessageUseCaseError::VCServiceFailed(
@@ -545,13 +584,14 @@ pub mod tests {
             let presets = TestPresets::default();
             let repository = presets.create_mock_did_repository();
 
-            let generated = create_test_message_for_verify_test(&presets).await;
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = VerifiableMessageUseCase {
                 project_verifier: Box::new(MockProjectVerifier::verify_success()),
                 did_repository: Box::new(repository.clone()),
                 message_activity_repository: Box::new(MockMessageActivityRepository::verify_fail()),
                 vc_service: DIDVCService::new(repository.clone()),
+                did_accessor: Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
             };
 
             let verified = usecase.verify(&generated, Utc::now()).await;

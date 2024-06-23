@@ -1,4 +1,4 @@
-use crate::nodex::utils;
+use super::did_accessor::{DIDAccessor, DIDAccessorImpl};
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::{network_config, server_config};
 use chrono::Utc;
@@ -22,6 +22,7 @@ pub struct StudioClient {
     pub base_url: Url,
     pub instance: reqwest::Client,
     pub service: DIDCommEncryptedService<DidRepositoryImpl<SideTreeClient>>,
+    pub did_accessor: DIDAccessorImpl,
 }
 
 impl StudioClient {
@@ -33,11 +34,13 @@ impl StudioClient {
         let did_repository = DidRepositoryImpl::new(sidetree_client);
         let service =
             DIDCommEncryptedService::new(did_repository, Some(server_config.did_attachment_link()));
+        let did_accessor = DIDAccessorImpl {};
 
         Ok(StudioClient {
             instance: client,
             base_url: url,
             service,
+            did_accessor,
         })
     }
 
@@ -97,8 +100,8 @@ impl StudioClient {
             "version": version,
             "os": os,
         });
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
         let payload = self
             .service
             .generate(
@@ -120,8 +123,8 @@ impl StudioClient {
         path: &str,
         project_did: &str,
     ) -> anyhow::Result<reqwest::Response> {
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
         let payload = self
             .service
             .generate(
@@ -150,8 +153,8 @@ impl StudioClient {
             "message_id": message_id,
             "is_verified": is_verified,
         });
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
         let payload = self
             .service
             .generate(
@@ -172,8 +175,8 @@ impl StudioClient {
         path: &str,
         project_did: &str,
     ) -> anyhow::Result<reqwest::Response> {
-        let my_did = utils::get_my_did();
-        let my_keyring = utils::get_my_keyring();
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
         let payload = self
             .service
             .generate(

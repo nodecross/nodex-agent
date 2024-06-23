@@ -2,6 +2,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+use crate::nodex::utils::did_accessor::DIDAccessorImpl;
 use crate::{
     services::studio::Studio, usecase::verifiable_message_usecase::VerifiableMessageUseCase,
 };
@@ -28,6 +29,7 @@ pub async fn handler(
         Box::new(NodeX::new()),
         Box::new(Studio::new()),
         DIDVCService::new(NodeX::new()),
+        Box::new(DIDAccessorImpl {}),
     );
 
     match usecase.verify(&json.message, now).await {

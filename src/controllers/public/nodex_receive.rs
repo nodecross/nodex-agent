@@ -1,4 +1,4 @@
-use crate::nodex::utils;
+use crate::nodex::utils::did_accessor::{DIDAccessor, DIDAccessorImpl};
 use crate::services::nodex::NodeX;
 use crate::services::studio::Studio;
 use anyhow::anyhow;
@@ -52,7 +52,7 @@ impl MessageReceiveUsecase {
                 .map_err(|e| anyhow::anyhow!("Invalid Json: {:?}", e))?;
             log::info!("Receive message. message_id = {:?}", m.id);
             match service
-                .verify(&utils::get_my_keyring(), &json_message)
+                .verify(&DIDAccessorImpl {}.get_my_keyring(), &json_message)
                 .await
             {
                 Ok(verified) => {
