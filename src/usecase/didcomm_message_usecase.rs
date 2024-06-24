@@ -6,7 +6,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    nodex::utils::did_accessor::DIDAccessor,
+    nodex::utils::did_accessor::DidAccessor,
     repository::message_activity_repository::{
         CreatedMessageActivityRequest, MessageActivityHttpError, MessageActivityRepository,
         VerifiedMessageActivityRequest, VerifiedStatus,
@@ -26,28 +26,24 @@ use nodex_didcomm::{
 };
 
 pub struct DidcommMessageUseCase<D: DidRepository> {
-    project_verifier: Box<dyn ProjectVerifier + Send + Sync + 'static>,
-    message_activity_repository: Box<dyn MessageActivityRepository + Send + Sync + 'static>,
+    project_verifier: Box<dyn ProjectVerifier>,
+    message_activity_repository: Box<dyn MessageActivityRepository>,
     didcomm_encrypted_service: DIDCommEncryptedService<D>,
-    did_accessor: Box<dyn DIDAccessor + Send + Sync + 'static>,
+    did_accessor: Box<dyn DidAccessor>,
 }
 
 impl<D: DidRepository> DidcommMessageUseCase<D> {
-    pub fn new<
-        V: ProjectVerifier + Send + Sync + 'static,
-        R: MessageActivityRepository + Send + Sync + 'static,
-        A: DIDAccessor + Send + Sync + 'static,
-    >(
-        project_verifier: V,
-        message_activity_repository: R,
+    pub fn new(
+        project_verifier: Box<dyn ProjectVerifier>,
+        message_activity_repository: Box<dyn MessageActivityRepository>,
         didcomm_encrypted_service: DIDCommEncryptedService<D>,
-        did_accessor: A,
+        did_accessor: Box<dyn DidAccessor>,
     ) -> DidcommMessageUseCase<D> {
         DidcommMessageUseCase {
-            project_verifier: Box::new(project_verifier),
-            message_activity_repository: Box::new(message_activity_repository),
+            project_verifier,
+            message_activity_repository,
             didcomm_encrypted_service,
-            did_accessor: Box::new(did_accessor),
+            did_accessor,
         }
     }
 }
@@ -289,10 +285,10 @@ mod tests {
         let service = DIDCommEncryptedService::new(presets.create_mock_did_repository(), None);
 
         let usecase = DidcommMessageUseCase::new(
-            MockProjectVerifier::create_success(),
-            MockMessageActivityRepository::create_success(),
+            Box::new(MockProjectVerifier::create_success()),
+            Box::new(MockMessageActivityRepository::create_success()),
             service.clone(),
-            MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+            Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
         );
 
         let message = "Hello".to_string();
@@ -309,10 +305,10 @@ mod tests {
             .unwrap();
 
         let usecase = DidcommMessageUseCase::new(
-            MockProjectVerifier::verify_success(),
-            MockMessageActivityRepository::verify_success(),
+            Box::new(MockProjectVerifier::verify_success()),
+            Box::new(MockMessageActivityRepository::verify_success()),
             service,
-            MockDIDAccessor::new(presets.to_did, presets.to_keyring),
+            Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
         );
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
@@ -335,10 +331,10 @@ mod tests {
             let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::create_success(),
-                MockMessageActivityRepository::create_success(),
+                Box::new(MockProjectVerifier::create_success()),
+                Box::new(MockMessageActivityRepository::create_success()),
                 DIDCommEncryptedService::new(MockDidRepository::empty(), None),
-                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+                Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
             );
 
             let message = "Hello".to_string();
@@ -359,10 +355,10 @@ mod tests {
             let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::create_failed(),
-                MockMessageActivityRepository::create_success(),
+                Box::new(MockProjectVerifier::create_failed()),
+                Box::new(MockMessageActivityRepository::create_success()),
                 DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
-                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+                Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
             );
 
             let message = "Hello".to_string();
@@ -383,10 +379,10 @@ mod tests {
             let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::create_success(),
-                MockMessageActivityRepository::create_fail(),
+                Box::new(MockProjectVerifier::create_success()),
+                Box::new(MockMessageActivityRepository::create_fail()),
                 DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
-                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+                Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
             );
 
             let message = "Hello".to_string();
@@ -412,10 +408,10 @@ mod tests {
 
         async fn create_test_message_for_verify_test(presets: TestPresets) -> String {
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::create_success(),
-                MockMessageActivityRepository::create_success(),
+                Box::new(MockProjectVerifier::create_success()),
+                Box::new(MockMessageActivityRepository::create_success()),
                 DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
-                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+                Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
             );
 
             let message = "Hello".to_string();
@@ -439,10 +435,10 @@ mod tests {
             let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::verify_success(),
-                MockMessageActivityRepository::verify_success(),
+                Box::new(MockProjectVerifier::verify_success()),
+                Box::new(MockMessageActivityRepository::verify_success()),
                 DIDCommEncryptedService::new(MockDidRepository::empty(), None),
-                MockDIDAccessor::new(presets.to_did, presets.to_keyring),
+                Box::new(MockDIDAccessor::new(presets.to_did, presets.to_keyring)),
             );
 
             let verified = usecase.verify(&generated, Utc::now()).await;
@@ -459,10 +455,10 @@ mod tests {
             let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier::verify_success(),
-                MockMessageActivityRepository::verify_fail(),
+                Box::new(MockProjectVerifier::verify_success()),
+                Box::new(MockMessageActivityRepository::verify_fail()),
                 DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
-                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
+                Box::new(MockDIDAccessor::new(presets.from_did, presets.from_keyring)),
             );
 
             let verified = usecase.verify(&generated, Utc::now()).await;

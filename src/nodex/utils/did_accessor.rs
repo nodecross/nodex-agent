@@ -1,13 +1,13 @@
 use nodex_didcomm::keyring::keypair::KeyPairing;
 
-pub trait DIDAccessor {
+pub trait DidAccessor {
     fn get_my_did(&self) -> String;
     fn get_my_keyring(&self) -> KeyPairing;
 }
 
 pub struct DIDAccessorImpl {}
 
-impl DIDAccessor for DIDAccessorImpl {
+impl DidAccessor for DIDAccessorImpl {
     fn get_my_did(&self) -> String {
         let config = crate::app_config();
         let config = config.lock();
@@ -36,7 +36,7 @@ pub mod mocks {
         }
     }
 
-    impl DIDAccessor for MockDIDAccessor {
+    impl DidAccessor for MockDIDAccessor {
         fn get_my_did(&self) -> String {
             self.my_did.clone()
         }

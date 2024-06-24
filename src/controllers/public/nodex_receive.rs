@@ -1,4 +1,4 @@
-use crate::nodex::utils::did_accessor::{DIDAccessor, DIDAccessorImpl};
+use crate::nodex::utils::did_accessor::{DIDAccessorImpl, DidAccessor};
 use crate::services::nodex::NodeX;
 use crate::services::studio::Studio;
 use anyhow::anyhow;

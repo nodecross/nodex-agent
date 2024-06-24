@@ -23,10 +23,10 @@ pub async fn handler(
     let now = Utc::now();
 
     let usecase = DidcommMessageUseCase::new(
-        ProjectVerifierImplOnNetworkConfig::new(),
-        Studio::new(),
+        Box::new(ProjectVerifierImplOnNetworkConfig::new()),
+        Box::new(Studio::new()),
         DIDCommEncryptedService::new(NodeX::new(), None),
-        DIDAccessorImpl {},
+        Box::new(DIDAccessorImpl {}),
     );
 
     match usecase.verify(&json.message, now).await {

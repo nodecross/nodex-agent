@@ -1,4 +1,4 @@
-use crate::nodex::utils::did_accessor::{DIDAccessor, DIDAccessorImpl};
+use crate::nodex::utils::did_accessor::{DIDAccessorImpl, DidAccessor};
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::repository::message_activity_repository::MessageActivityHttpError;
 use crate::repository::metric_repository::{MetricStoreRepository, MetricsWithTimestamp};

@@ -1,4 +1,4 @@
-use crate::nodex::utils::did_accessor::DIDAccessor;
+use crate::nodex::utils::did_accessor::DidAccessor;
 use crate::{
     repository::message_activity_repository::*, services::project_verifier::ProjectVerifier,
 };
@@ -21,7 +21,7 @@ pub struct VerifiableMessageUseCase<D: DidRepository> {
     did_repository: Box<dyn DidRepository>,
     message_activity_repository: Box<dyn MessageActivityRepository>,
     vc_service: DIDVCService<D>,
-    did_accessor: Box<dyn DIDAccessor>,
+    did_accessor: Box<dyn DidAccessor>,
 }
 
 impl<D: DidRepository> VerifiableMessageUseCase<D> {
@@ -30,7 +30,7 @@ impl<D: DidRepository> VerifiableMessageUseCase<D> {
         did_repository: Box<dyn DidRepository>,
         message_activity_repository: Box<dyn MessageActivityRepository>,
         vc_service: DIDVCService<D>,
-        did_accessor: Box<dyn DIDAccessor>,
+        did_accessor: Box<dyn DidAccessor>,
     ) -> Self {
         Self {
             project_verifier,

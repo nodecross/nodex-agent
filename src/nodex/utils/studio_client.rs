@@ -1,4 +1,4 @@
-use super::did_accessor::{DIDAccessor, DIDAccessorImpl};
+use super::did_accessor::{DIDAccessorImpl, DidAccessor};
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::{network_config, server_config};
 use chrono::Utc;
