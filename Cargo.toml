@@ -11,7 +11,7 @@ license-file = "LICENSE"
 name = "nodex"
 readme = "README.md"
 repository = "https://github.com/nodecross/nodex"
-version = "2.0.2"
+version = "2.0.3"
 
 [workspace]
 members = ["e2e"]
