@@ -7,7 +7,8 @@ pub struct Context {
     pub sender: TokioMutex<Box<dyn TransferClient>>,
 }
 
-pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Server {
+#[cfg(unix)]
+pub fn new_uds_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Server {
     let context = web::Data::new(Context {
         sender: TokioMutex::new(sender),
     });
@@ -17,8 +18,36 @@ pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Serve
             .wrap(middleware::DefaultHeaders::new().add(("x-version", "0.1.0")))
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
-            .app_data(context.clone())
-            // NOTE: Public Routes
+            .configure(config_app(context.clone()))
+    })
+    .bind_uds(sock_path)
+    .unwrap()
+    .workers(1)
+    .run()
+}
+
+#[cfg(windows)]
+pub fn new_web_server(port: u16, sender: Box<dyn TransferClient>) -> Server {
+    let context = web::Data::new(Context {
+        sender: TokioMutex::new(sender),
+    });
+
+    HttpServer::new(move || {
+        App::new()
+            .wrap(middleware::DefaultHeaders::new().add(("x-version", "0.1.0")))
+            .wrap(middleware::Compress::default())
+            .wrap(middleware::Logger::default())
+            .configure(config_app(context.clone()))
+    })
+    .bind(format!("127.0.0.1:{}", port))
+    .unwrap()
+    .workers(1)
+    .run()
+}
+
+fn config_app(context: web::Data<Context>) -> Box<dyn Fn(&mut web::ServiceConfig)> {
+    Box::new(move |cfg: &mut web::ServiceConfig| {
+        cfg.app_data(context.clone())
             .route(
                 "/identifiers",
                 web::post().to(controllers::public::nodex_create_identifier::handler),
@@ -115,10 +144,6 @@ pub fn new_server(sock_path: &PathBuf, sender: Box<dyn TransferClient>) -> Serve
                                     .to(controllers::internal::didcomm_verify_encrypted::handler),
                             ),
                     ),
-            )
+            );
     })
-    .bind_uds(sock_path)
-    .unwrap()
-    .workers(1)
-    .run()
 }

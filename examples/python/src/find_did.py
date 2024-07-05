@@ -1,5 +1,10 @@
-from sock import get
+from platform_os import is_windows
 
+
+if is_windows():
+    from request import get
+else:
+    from sock import get
 
 # PLEASE WRITE destination_did
 destination_did = (

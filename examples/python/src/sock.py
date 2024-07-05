@@ -25,6 +25,7 @@ def call(method, path, payload):
             response = session.post(url, json=payload)
         else:
             raise ValueError(f"Unsupported method: {method}")
+
         # Raises stored HTTPError, if one occurred.
         response.raise_for_status()
         if response.status_code == 204:

@@ -59,6 +59,25 @@ jobs:
           use-cache: true
           github-token: ${{ env.GITHUB_TOKEN }}
 
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    name: Build / Windows / ${{ matrix.target }}
+
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) build
+        uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          use-cache: true
+          github-token: ${{ env.GITHUB_TOKEN }}
+
   build-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -118,9 +137,47 @@ jobs:
         run: ls -la
 
       - name: (run) e2e
-        uses: ./.github/actions/e2e
+        uses: ./.github/actions/e2e-mac
         with:
           binary-path: ./nodex-agent
+
+  e2e-windows:
+    needs: build-windows
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+        runner: [windows-2022, windows-2019]
+    name: E2E / Windows / ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) download artifacts (windows)
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: .
+
+      - name: (unzip) unzip binary
+        run: Expand-Archive -Path nodex-agent-${{ matrix.target }}.zip -DestinationPath .
+        shell: powershell
+
+      - name: (setup) adjust permissions
+        run: |
+          Get-ChildItem -Path ./nodex-agent* | Unblock-File
+        shell: powershell
+
+      - name: (check) check binary
+        run: dir
+
+      - name: (run) e2e
+        uses: ./.github/actions/e2e-windows
+        with:
+          binary-path: ./nodex-agent.exe
 
   e2e-linux:
     needs: build-linux

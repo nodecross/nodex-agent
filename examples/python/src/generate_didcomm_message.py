@@ -1,6 +1,11 @@
-from sock import post
 import json
 import pprint
+from platform_os import is_windows
+
+if is_windows():
+    from request import post
+else:
+    from sock import post
 
 
 # PLEASE WRITE destination_did, message, AND operation_tag.
