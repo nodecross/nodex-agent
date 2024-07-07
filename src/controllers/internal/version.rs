@@ -2,6 +2,7 @@ use crate::services::nodex::NodeX;
 use actix_web::{web, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::path::PathBuf;
 
 // NOTE: POST /internal/version
 #[derive(Deserialize, Serialize)]
@@ -27,7 +28,7 @@ pub async fn handler_update(
         None => return Ok(HttpResponse::BadRequest().json("path is required")),
     };
     let nodex = NodeX::new();
-    match nodex.update_version(binary_url, path).await {
+    match nodex.update_version(binary_url, PathBuf::from(path)).await {
         Ok(_) => Ok(HttpResponse::Ok().json("ok")),
         Err(_) => Ok(HttpResponse::InternalServerError().finish()),
     }

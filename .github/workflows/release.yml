@@ -26,7 +26,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        target: [x86_64-apple-darwin]
+        target: [aarch64-apple-darwin]
     name: Build / MacOS / ${{ matrix.target }}
     steps:
       - name: (checkout) source code
@@ -55,11 +55,31 @@ jobs:
         with:
           target: ${{ matrix.target }}
           use-cache: false
+          binary-file-name: nodex-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    needs: check-user
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    name: Build / Windows / ${{ matrix.target }}
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) build
+        uses: ./.github/actions/build-with-cross
+        with:
+          target: ${{ matrix.target }}
+          use-cache: false
+          binary-file-name: nodex-agent.exe
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
   release:
     name: Release
-    needs: [build-macos, build-linux]
+    needs: [build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -89,10 +109,9 @@ jobs:
 
       - name: Create Example asset
         shell: bash
-        working-directory: examples/nodejs
+        working-directory: examples
         run: |
-          mv app/README.md .
-          zip -r example.zip app/ README.md package.json tsconfig.json yarn.lock ../../LICENSE
+          zip -r example.zip nodejs/ python/ systemd/ ../../LICENSE
 
       - name: Create Release
         uses: actions/github-script@v5
@@ -122,8 +141,17 @@ jobs:
         uses: ./.github/actions/upload-release-asset
         with:
           release_id: ${{ steps.release.outputs.result }}
-          asset_path: ${{ github.workspace }}/nodex-agent-x86_64-apple-darwin.zip
+          asset_path: ${{ github.workspace }}/nodex-agent-aarch64-apple-darwin.zip
           asset_name: nodex-agent-mac.zip
+          asset_content_type: application/zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload asset (windows)
+        uses: ./.github/actions/upload-release-asset
+        with:
+          release_id: ${{ steps.release.outputs.result }}
+          asset_path: ${{ github.workspace }}/nodex-agent-x86_64-pc-windows-msvc.zip
+          asset_name: nodex-agent-x86_64-windows.zip
           asset_content_type: application/zip
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -131,7 +159,7 @@ jobs:
         uses: ./.github/actions/upload-release-asset
         with:
           release_id: ${{ steps.release.outputs.result }}
-          asset_path: ./examples/nodejs/example.zip
+          asset_path: ./examples/example.zip
           asset_name: example.zip
           asset_content_type: application/zip
           github_token: ${{ secrets.GITHUB_TOKEN }}

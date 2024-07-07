@@ -1,11 +1,13 @@
 extern crate env_logger;
 
 use crate::{config::ServerConfig, controllers::public::nodex_receive};
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use handlers::Command;
 use handlers::MqttClient;
 use mac_address::get_mac_address;
+#[cfg(unix)]
 use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
@@ -25,6 +27,13 @@ use tokio::sync::Mutex;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 use tokio::time::Duration;
+
+#[cfg(windows)]
+use windows::Win32::{
+    Foundation::{CloseHandle, GetLastError},
+    System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE},
+};
+
 use usecase::metric_usecase::MetricUsecase;
 
 mod config;
@@ -153,8 +162,6 @@ async fn main() -> std::io::Result<()> {
     studio_initialize(device_did.did_document.id.clone()).await;
     send_device_info().await;
 
-    let sock_path = runtime_dir.clone().join("nodex.sock");
-
     // NOTE: connect mqtt server
     let mqtt_host = "demo-mqtt.getnodex.io";
     let mqtt_port = 1883;
@@ -206,7 +213,20 @@ async fn main() -> std::io::Result<()> {
 
     let transfer_client = Box::new(MqttClient::new(tx));
 
-    let server = server::new_server(&sock_path, transfer_client);
+    #[cfg(unix)]
+    let server = {
+        let sock_path = runtime_dir.clone().join("nodex.sock");
+        server::new_uds_server(&sock_path, transfer_client)
+    };
+
+    #[cfg(windows)]
+    let server = {
+        let port_str =
+            env::var("NODEX_SERVER_PORT").expect("NODEX_SERVER_PORT must be set and valid.");
+        let port = validate_port(&port_str).expect("Invalid port number.");
+        server::new_web_server(port, transfer_client)
+    };
+
     let server_handle = server.handle();
 
     let message_polling_task =
@@ -247,6 +267,14 @@ async fn main() -> std::io::Result<()> {
     }
 }
 
+#[cfg(windows)]
+fn validate_port(port_str: &str) -> Result<u16, String> {
+    match port_str.parse::<u16>() {
+        Ok(port) if (1024..=65535).contains(&port) => Ok(port),
+        _ => Err("Port number must be an integer between 1024 and 65535.".to_string()),
+    }
+}
+
 #[cfg(unix)]
 async fn handle_signals(should_stop: Arc<AtomicBool>) {
     use tokio::signal::unix::{signal, SignalKind};
@@ -266,12 +294,13 @@ async fn handle_signals(should_stop: Arc<AtomicBool>) {
     }
 }
 
-#[cfg(not(unix))]
-async fn handle_signals() {
+#[cfg(windows)]
+async fn handle_signals(should_stop: Arc<AtomicBool>) {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to listen for Ctrl+C");
     log::info!("Received Ctrl+C");
+    should_stop.store(true, Ordering::Relaxed);
 }
 
 fn use_cli(command: Option<Commands>, did: String) {
@@ -407,7 +436,12 @@ fn kill_other_self_process() {
             let mut system = System::new_all();
             system.refresh_all();
 
-            for process in system.processes_by_exact_name("nodex-agent") {
+            #[cfg(unix)]
+            let process_name = { "nodex-agent" };
+            #[cfg(windows)]
+            let process_name = { "nodex-agent.exe" };
+
+            for process in system.processes_by_exact_name(process_name) {
                 if current_pid == process.pid() {
                     continue;
                 }
@@ -415,18 +449,10 @@ fn kill_other_self_process() {
                     continue;
                 }
 
-                let pid_as_i32 = process.pid().as_u32() as i32;
-                match kill(Pid::from_raw(pid_as_i32), Signal::SIGTERM) {
-                    Ok(_) => log::info!(
-                        "nodex Process with PID: {} killed successfully.",
-                        pid_as_i32
-                    ),
-                    Err(e) => log::error!(
-                        "Failed to kill nodex process with PID: {}. Error: {}",
-                        pid_as_i32,
-                        e
-                    ),
-                };
+                let pid = process.pid().as_u32();
+                if let Err(e) = kill_process(pid) {
+                    log::error!("Failed to kill process with PID: {}. Error: {:?}", pid, e);
+                }
             }
         }
         Err(e) => {
@@ -434,4 +460,46 @@ fn kill_other_self_process() {
             panic!()
         }
     }
+}
+#[cfg(unix)]
+fn kill_process(pid: u32) -> Result<(), anyhow::Error> {
+    kill(Pid::from_raw(pid as i32), Signal::SIGTERM).map_err(|e| {
+        anyhow!(
+            "Failed to kill nodex process with PID: {}. Error: {}",
+            pid,
+            e
+        )
+    })?;
+    log::info!("nodex Process with PID: {} killed successfully.", pid);
+    Ok(())
+}
+
+#[cfg(windows)]
+fn kill_process(pid: u32) -> Result<(), anyhow::Error> {
+    unsafe {
+        let handle = OpenProcess(PROCESS_TERMINATE, false, pid)?;
+        if handle.is_invalid() {
+            return Err(anyhow!(
+                "Failed to open process with PID: {}. Invalid handle.",
+                pid
+            ));
+        }
+
+        match TerminateProcess(handle, 1) {
+            Ok(_) => {
+                log::info!("nodex Process with PID: {} killed successfully.", pid);
+            }
+            Err(e) => {
+                CloseHandle(handle);
+                return Err(anyhow!(
+                    "Failed to terminate process with PID: {}. Error: {:?}",
+                    pid,
+                    GetLastError()
+                ));
+            }
+        };
+        CloseHandle(handle);
+    }
+
+    Ok(())
 }

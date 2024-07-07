@@ -1,9 +1,16 @@
-from sock import post
+import json
+from platform_os import is_windows
+
+
+if is_windows():
+    from request import post
+else:
+    from sock import post
 
 
 payload = {
     "message": {
-        "binary_url": "http://example.com/nodex-agent-1.0.0.zip",
+        "binary_url": "https://example.com/nodex-agent-1.0.0.zip",
         "path": "/tmp",
     }
 }

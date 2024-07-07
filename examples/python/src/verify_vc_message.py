@@ -1,5 +1,11 @@
-from sock import post
 import json
+from platform_os import is_windows
+
+
+if is_windows():
+    from request import post
+else:
+    from sock import post
 
 
 # PLEASE PASTE BELOW THE RESPONSE FROM "generate_vc_message.py".

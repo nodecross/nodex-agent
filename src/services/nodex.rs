@@ -1,14 +1,23 @@
 use crate::nodex::keyring;
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::server_config;
-use daemonize::Daemonize;
+use anyhow;
+use bytes::Bytes;
 use nodex_didcomm::did::did_repository::{
     CreateIdentifierError, DidRepository, DidRepositoryImpl, FindIdentifierError,
 };
 use nodex_didcomm::did::sidetree::payload::DIDResolutionResponse;
 use nodex_didcomm::keyring::keypair::KeyPairing;
-use std::{fs, io::Cursor, path::PathBuf, process::Command};
-use zip_extract;
+use std::{
+    fs,
+    io::Cursor,
+    path::{Path, PathBuf},
+    process::Command,
+};
+use zip::ZipArchive;
+
+#[cfg(unix)]
+use daemonize::Daemonize;
 
 pub struct NodeX {
     repository: DidRepositoryImpl<SideTreeClient>,
@@ -56,32 +65,84 @@ impl NodeX {
         Ok(res)
     }
 
-    pub async fn update_version(&self, binary_url: &str, output_path: &str) -> anyhow::Result<()> {
+    pub async fn update_version(
+        &self,
+        binary_url: &str,
+        output_path: PathBuf,
+    ) -> anyhow::Result<()> {
         anyhow::ensure!(
             binary_url.starts_with("https://github.com/nodecross/nodex/releases/download/"),
             "Invalid url"
         );
-        let output_path = if output_path.ends_with('/') {
-            output_path.trim_end()
-        } else {
-            output_path
-        };
-        let agent_path = format!("{}/nodex-agent", output_path);
+
+        #[cfg(unix)]
+        let agent_filename = { "nodex-agent" };
+        #[cfg(windows)]
+        let agent_filename = { "nodex-agent.exe" };
+
+        let agent_path = output_path.join(agent_filename);
+
         let response = reqwest::get(binary_url).await?;
         let content = response.bytes().await?;
         if PathBuf::from(&agent_path).exists() {
             fs::remove_file(&agent_path)?;
         }
-        let target_dir = PathBuf::from(output_path);
-        zip_extract::extract(Cursor::new(content), &target_dir, true)?;
+        self.extract_zip(content, &output_path)?;
 
-        Command::new("chmod").arg("+x").arg(&agent_path).status()?;
+        self.run_agent(&agent_path)?;
+
+        Ok(())
+    }
+
+    fn extract_zip(&self, archive_data: Bytes, output_path: &Path) -> anyhow::Result<()> {
+        let cursor = Cursor::new(archive_data);
+        let mut archive = ZipArchive::new(cursor)?;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            let file_path = output_path.join(file.mangled_name());
+
+            if file.is_file() {
+                if let Some(parent) = file_path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                let mut output_file = fs::File::create(&file_path)?;
+                std::io::copy(&mut file, &mut output_file)?;
+            } else if file.is_dir() {
+                std::fs::create_dir_all(&file_path)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    fn run_agent(&self, agent_path: &Path) -> anyhow::Result<()> {
+        Command::new("chmod").arg("+x").arg(agent_path).status()?;
 
         let daemonize = Daemonize::new();
         daemonize.start().expect("Failed to update nodex process");
-        std::process::Command::new(&agent_path)
+        std::process::Command::new(agent_path)
             .spawn()
             .expect("Failed to execute command");
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    fn run_agent(&self, agent_path: &Path) -> anyhow::Result<()> {
+        let agent_path_str = agent_path
+            .to_str()
+            .ok_or_else(|| anyhow::anyhow!("Failed to convert agent_path to string"))?;
+
+        let status = Command::new("cmd")
+            .args(&["/C", "start", agent_path_str])
+            .status()?;
+
+        if !status.success() {
+            eprintln!("Command execution failed with status: {}", status);
+        } else {
+            println!("Started child process");
+        }
 
         Ok(())
     }
