@@ -1,16 +1,13 @@
 use crate::nodex::keyring;
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::server_config;
-
+use daemonize::Daemonize;
 use nodex_didcomm::did::did_repository::{
     CreateIdentifierError, DidRepository, DidRepositoryImpl, FindIdentifierError,
 };
 use nodex_didcomm::did::sidetree::payload::DIDResolutionResponse;
-
 use nodex_didcomm::keyring::keypair::KeyPairing;
-
 use std::{fs, io::Cursor, path::PathBuf, process::Command};
-
 use zip_extract;
 
 pub struct NodeX {
@@ -64,17 +61,14 @@ impl NodeX {
             binary_url.starts_with("https://github.com/nodecross/nodex/releases/download/"),
             "Invalid url"
         );
-
         let output_path = if output_path.ends_with('/') {
             output_path.trim_end()
         } else {
             output_path
         };
         let agent_path = format!("{}/nodex-agent", output_path);
-
         let response = reqwest::get(binary_url).await?;
         let content = response.bytes().await?;
-
         if PathBuf::from(&agent_path).exists() {
             fs::remove_file(&agent_path)?;
         }
@@ -82,7 +76,12 @@ impl NodeX {
         zip_extract::extract(Cursor::new(content), &target_dir, true)?;
 
         Command::new("chmod").arg("+x").arg(&agent_path).status()?;
-        Command::new(&agent_path).spawn()?;
+
+        let daemonize = Daemonize::new();
+        daemonize.start().expect("Failed to update nodex process");
+        std::process::Command::new(&agent_path)
+            .spawn()
+            .expect("Failed to execute command");
 
         Ok(())
     }

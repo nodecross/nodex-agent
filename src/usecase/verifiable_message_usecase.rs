@@ -16,21 +16,33 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
 
-pub struct VerifiableMessageUseCase<D: DidRepository> {
-    project_verifier: Box<dyn ProjectVerifier>,
-    did_repository: Box<dyn DidRepository>,
-    message_activity_repository: Box<dyn MessageActivityRepository>,
+pub struct VerifiableMessageUseCase<V, R, D, A>
+where
+    V: ProjectVerifier,
+    R: MessageActivityRepository,
+    D: DidRepository,
+    A: DidAccessor,
+{
+    project_verifier: V,
+    did_repository: D,
+    message_activity_repository: R,
     vc_service: DIDVCService<D>,
-    did_accessor: Box<dyn DidAccessor>,
+    did_accessor: A,
 }
 
-impl<D: DidRepository> VerifiableMessageUseCase<D> {
+impl<V, R, D, A> VerifiableMessageUseCase<V, R, D, A>
+where
+    V: ProjectVerifier,
+    R: MessageActivityRepository,
+    D: DidRepository,
+    A: DidAccessor,
+{
     pub fn new(
-        project_verifier: Box<dyn ProjectVerifier>,
-        did_repository: Box<dyn DidRepository>,
-        message_activity_repository: Box<dyn MessageActivityRepository>,
+        project_verifier: V,
+        did_repository: D,
+        message_activity_repository: R,
         vc_service: DIDVCService<D>,
-        did_accessor: Box<dyn DidAccessor>,
+        did_accessor: A,
     ) -> Self {
         Self {
             project_verifier,
@@ -84,7 +96,13 @@ pub enum VerifyVerifiableMessageUseCaseError {
     Other(#[from] anyhow::Error),
 }
 
-impl<D: DidRepository> VerifiableMessageUseCase<D> {
+impl<V, R, D, A> VerifiableMessageUseCase<V, R, D, A>
+where
+    V: ProjectVerifier,
+    R: MessageActivityRepository,
+    D: DidRepository,
+    A: DidAccessor,
+{
     pub async fn generate(
         &self,
         destination_did: String,

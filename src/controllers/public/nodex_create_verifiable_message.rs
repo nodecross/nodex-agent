@@ -28,11 +28,11 @@ pub async fn handler(
     let now = Utc::now();
 
     let usecase = VerifiableMessageUseCase::new(
-        Box::new(ProjectVerifierImplOnNetworkConfig::new()),
-        Box::new(NodeX::new()),
-        Box::new(Studio::new()),
+        ProjectVerifierImplOnNetworkConfig::new(),
+        NodeX::new(),
+        Studio::new(),
         DIDVCService::new(NodeX::new()),
-        Box::new(DIDAccessorImpl {}),
+        DIDAccessorImpl {},
     );
 
     match usecase

@@ -25,10 +25,10 @@ pub async fn handler(
     let now = Utc::now();
 
     let usecase = DidcommMessageUseCase::new(
-        Box::new(ProjectVerifierImplOnNetworkConfig::new()),
-        Box::new(Studio::new()),
+        ProjectVerifierImplOnNetworkConfig::new(),
+        Studio::new(),
         DIDCommEncryptedService::new(NodeX::new(), None),
-        Box::new(DIDAccessorImpl {}),
+        DIDAccessorImpl {},
     );
 
     match usecase
