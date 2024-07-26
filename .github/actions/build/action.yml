@@ -38,6 +38,20 @@ runs:
         files: target/${{ inputs.target }}/release/nodex-agent
         dest: nodex-agent-${{ inputs.target }}.zip
 
+    - name: (run) create artifact for Windows
+      if: contains(inputs.target, 'windows')
+      uses: vimtor/action-zip@v1.1
+      with:
+        files: target/${{ inputs.target }}/release/nodex-agent.exe
+        dest: nodex-agent-${{ inputs.target }}.zip
+
+    - name: (run) create artifact for non-Windows
+      if: "!contains(inputs.target, 'windows')"
+      uses: vimtor/action-zip@v1.1
+      with:
+        files: target/${{ inputs.target }}/release/nodex-agent
+        dest: nodex-agent-${{ inputs.target }}.zip
+
     - name: (run) upload artifact
       uses: actions/upload-artifact@v4
       with:

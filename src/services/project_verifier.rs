@@ -55,6 +55,72 @@ impl ProjectVerifier for ProjectVerifierImplOnNetworkConfig {
 }
 
 #[cfg(test)]
+pub mod mocks {
+    use super::*;
+
+    pub struct MockProjectVerifier {
+        create: Option<bool>,
+        verify: Option<Option<bool>>,
+    }
+
+    impl MockProjectVerifier {
+        pub fn create_success() -> Self {
+            MockProjectVerifier {
+                create: Some(true),
+                verify: None,
+            }
+        }
+
+        pub fn create_failed() -> Self {
+            MockProjectVerifier {
+                create: Some(false),
+                verify: None,
+            }
+        }
+
+        pub fn verify_success() -> Self {
+            MockProjectVerifier {
+                create: None,
+                verify: Some(Some(true)),
+            }
+        }
+
+        pub fn verify_failed() -> Self {
+            MockProjectVerifier {
+                create: None,
+                verify: Some(Some(false)),
+            }
+        }
+
+        pub fn verify_throw_error() -> Self {
+            MockProjectVerifier {
+                create: None,
+                verify: Some(None),
+            }
+        }
+    }
+
+    impl ProjectVerifier for MockProjectVerifier {
+        fn create_project_hmac(&self) -> anyhow::Result<String> {
+            let create = self.create.expect("this method should not be called");
+            if create {
+                Ok("mock".to_string())
+            } else {
+                Err(anyhow::anyhow!("create failed"))
+            }
+        }
+
+        fn verify_project_hmac(&self, _signature: &str) -> anyhow::Result<bool> {
+            let verify = self.verify.expect("this method should not be called");
+            match verify {
+                Some(result) => Ok(result),
+                None => Err(anyhow::anyhow!("verify failed")),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::network_config;

@@ -6,24 +6,28 @@ use std::fmt::{Display, Formatter, Result};
 pub struct Metric {
     pub metric_type: MetricType,
     pub value: f32,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct MetricsWithTimestamp {
     pub timestamp: DateTime<Utc>,
+    pub metrics: Vec<Metric>,
 }
 
 pub trait MetricsWatchRepository {
     fn watch_metrics(&mut self) -> Vec<Metric>;
 }
 
-#[derive(Debug, Serialize, Clone)]
-pub struct MetricStoreRequest {
-    pub device_did: String,
-    pub timestamp: DateTime<Utc>,
-    pub metric_name: String,
-    pub metric_value: f32,
+pub trait MetricsCacheRepository {
+    fn new() -> Self;
+    fn push(&mut self, timestamp: DateTime<Utc>, metrics: Vec<Metric>);
+    fn clear(&mut self);
+    fn get(&mut self) -> Vec<MetricsWithTimestamp>;
 }
 
 #[async_trait::async_trait]
 pub trait MetricStoreRepository {
-    async fn save(&self, request: MetricStoreRequest) -> anyhow::Result<()>;
+    async fn save(&self, request: Vec<MetricsWithTimestamp>) -> anyhow::Result<()>;
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq)]

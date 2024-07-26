@@ -1,10 +1,18 @@
-use crate::repository::metric_repository::{Metric, MetricType, MetricsWatchRepository};
-use chrono::Utc;
+use std::sync::{Arc, Mutex};
+
+use crate::repository::metric_repository::{
+    Metric, MetricType, MetricsCacheRepository, MetricsWatchRepository, MetricsWithTimestamp,
+};
+use chrono::{DateTime, Utc};
 use sysinfo::{Networks, System};
 
 pub struct MetricsWatchService {
     system: System,
     networks: Networks,
+}
+
+pub struct MetricsInMemoryCacheService {
+    cache: std::sync::Arc<std::sync::Mutex<Vec<MetricsWithTimestamp>>>,
 }
 
 impl MetricsWatchService {
@@ -14,15 +22,12 @@ impl MetricsWatchService {
             networks: Networks::new(),
         }
     }
-}
 
-impl MetricsWatchService {
     fn cpu_usage(&mut self) -> Metric {
         self.system.refresh_cpu_usage();
         Metric {
             metric_type: MetricType::CpuUsage,
             value: self.system.global_cpu_info().cpu_usage(),
-            timestamp: Utc::now(),
         }
     }
 
@@ -31,7 +36,6 @@ impl MetricsWatchService {
         Metric {
             metric_type: MetricType::MemoryUsage,
             value: self.system.used_memory() as f32,
-            timestamp: Utc::now(),
         }
     }
 
@@ -49,27 +53,22 @@ impl MetricsWatchService {
             transmitted_packets += network.packets_transmitted();
         }
 
-        let timestamp = Utc::now();
         vec![
             Metric {
                 metric_type: MetricType::NetworkReceivedBytes,
                 value: received_bytes as f32,
-                timestamp,
             },
             Metric {
                 metric_type: MetricType::NetworkTransmittedBytes,
                 value: transmitted_bytes as f32,
-                timestamp,
             },
             Metric {
                 metric_type: MetricType::NetworkReceivedPackets,
                 value: received_packets as f32,
-                timestamp,
             },
             Metric {
                 metric_type: MetricType::NetworkTransmittedPackets,
                 value: transmitted_packets as f32,
-                timestamp,
             },
         ]
     }
@@ -85,17 +84,14 @@ impl MetricsWatchService {
             written_bytes += disk_usage.written_bytes;
         }
 
-        let timestamp = Utc::now();
         vec![
             Metric {
                 metric_type: MetricType::DiskReadBytes,
                 value: read_bytes as f32,
-                timestamp,
             },
             Metric {
                 metric_type: MetricType::DiskWrittenBytes,
                 value: written_bytes as f32,
-                timestamp,
             },
         ]
     }
@@ -111,6 +107,29 @@ impl MetricsWatchRepository for MetricsWatchService {
         metrics.append(&mut self.disk_info());
 
         metrics
+    }
+}
+
+impl MetricsCacheRepository for MetricsInMemoryCacheService {
+    fn new() -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    fn push(&mut self, timestamp: DateTime<Utc>, metrics: Vec<Metric>) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.push(MetricsWithTimestamp { timestamp, metrics });
+    }
+
+    fn clear(&mut self) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.clear();
+    }
+
+    fn get(&mut self) -> Vec<MetricsWithTimestamp> {
+        let cache = self.cache.lock().unwrap();
+        cache.clone()
     }
 }
 

@@ -14,8 +14,18 @@ runs:
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
 
-    - name: (check) lint
+    - name: (check) lint-rs
       shell: bash
       run: |
         cargo fmt --all -- --check
         cargo clippy -- -D warnings
+
+    - name: (check) install-taplo
+      shell: bash
+      run: cargo install taplo-cli
+
+    - name: (check) lint-toml
+      shell: bash
+      run: |
+        taplo lint
+        taplo format --check

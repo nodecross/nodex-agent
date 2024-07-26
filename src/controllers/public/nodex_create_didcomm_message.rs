@@ -2,15 +2,13 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+use crate::nodex::utils::did_accessor::DIDAccessorImpl;
 use crate::{services::studio::Studio, usecase::didcomm_message_usecase::DidcommMessageUseCase};
 use crate::{
-    services::{
-        internal::{did_vc::DIDVCService, didcomm_encrypted::DIDCommEncryptedService},
-        nodex::NodeX,
-        project_verifier::ProjectVerifierImplOnNetworkConfig,
-    },
+    services::{nodex::NodeX, project_verifier::ProjectVerifierImplOnNetworkConfig},
     usecase::didcomm_message_usecase::GenerateDidcommMessageUseCaseError,
 };
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
 
 // NOTE: POST /create-didcomm-message
 #[derive(Deserialize, Serialize)]
@@ -29,7 +27,8 @@ pub async fn handler(
     let usecase = DidcommMessageUseCase::new(
         ProjectVerifierImplOnNetworkConfig::new(),
         Studio::new(),
-        DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new())),
+        DIDCommEncryptedService::new(NodeX::new(), None),
+        DIDAccessorImpl {},
     );
 
     match usecase

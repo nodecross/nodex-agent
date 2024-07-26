@@ -138,6 +138,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/metric:
+    post:
+      summary: Send metrics
+      operationId: sendMetics
+      tags:
+        - metric
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Metric"
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   schemas:
     RegisterDeviceRequest:
@@ -175,6 +200,20 @@ components:
             $ref: "#/components/schemas/Recipient"
           example: []
 
+    Metric:
+      type: object
+      properties:
+        device_did:
+          type: string
+        metric_name:
+          type: string
+        metric_value:
+          type: number
+          format: float
+        timestamp:
+          type: string
+          format: date-time
+  
     Recipient:
       type: object
       properties:

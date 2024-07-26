@@ -1,5 +1,11 @@
+use crate::nodex::utils::did_accessor::{DIDAccessorImpl, DidAccessor};
+use crate::nodex::utils::sidetree_client::SideTreeClient;
+use crate::repository::custom_metric_repository::{
+    CustomMetricStoreRepository, CustomMetricStoreRequest,
+};
+use crate::repository::event_repository::{EventStoreRepository, EventStoreRequest};
 use crate::repository::message_activity_repository::MessageActivityHttpError;
-use crate::repository::metric_repository::{MetricStoreRepository, MetricStoreRequest};
+use crate::repository::metric_repository::{MetricStoreRepository, MetricsWithTimestamp};
 use crate::server_config;
 use crate::{
     nodex::utils::studio_client::{StudioClient, StudioClientConfig},
@@ -7,16 +13,12 @@ use crate::{
         CreatedMessageActivityRequest, MessageActivityRepository, VerifiedMessageActivityRequest,
     },
 };
-
 use anyhow::Context;
-
+use nodex_didcomm::did::did_repository::DidRepositoryImpl;
+use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
+use nodex_didcomm::verifiable_credentials::did_vc::DIDVCService;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-
-use super::{
-    internal::{did_vc::DIDVCService, didcomm_encrypted::DIDCommEncryptedService},
-    nodex::NodeX,
-};
 
 #[derive(Deserialize)]
 pub struct EmptyResponse {}
@@ -34,6 +36,9 @@ struct ErrorResponse {
 
 pub struct Studio {
     http_client: StudioClient,
+    didcomm_service: DIDCommEncryptedService<DidRepositoryImpl<SideTreeClient>>,
+    vc_service: DIDVCService<DidRepositoryImpl<SideTreeClient>>,
+    did_accessor: DIDAccessorImpl,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,8 +79,21 @@ impl Studio {
             }
         };
 
+        let sidetree_client = SideTreeClient::new(&server_config.did_http_endpoint())
+            .expect("failed to create sidetree client");
+        let did_repository = DidRepositoryImpl::new(sidetree_client);
+        let didcomm_service = DIDCommEncryptedService::new(
+            did_repository.clone(),
+            Some(server_config.did_attachment_link()),
+        );
+        let vc_service = DIDVCService::new(did_repository);
+        let did_accessor = DIDAccessorImpl {};
+
         Studio {
             http_client: client,
+            didcomm_service,
+            vc_service,
+            did_accessor,
         }
     }
 
@@ -229,15 +247,25 @@ impl MessageActivityRepository for Studio {
         request: CreatedMessageActivityRequest,
     ) -> Result<(), MessageActivityHttpError> {
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
 
         let project_did = {
             let network = crate::network_config();
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let payload = service
-            .generate(&project_did, &json!(request), None, request.occurred_at)
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
+
+        let payload = self
+            .didcomm_service
+            .generate(
+                &my_did,
+                &project_did,
+                &my_keyring,
+                &json!(request),
+                None,
+                request.occurred_at,
+            )
             .await
             .context("failed to generate payload")?;
         let payload = serde_json::to_string(&payload).context("failed to serialize")?;
@@ -279,14 +307,24 @@ impl MessageActivityRepository for Studio {
         request: VerifiedMessageActivityRequest,
     ) -> Result<(), MessageActivityHttpError> {
         // TODO: refactoring more simple
-        let service = DIDCommEncryptedService::new(NodeX::new(), DIDVCService::new(NodeX::new()));
         let project_did = {
             let network = crate::network_config();
             let network = network.lock();
             network.get_project_did().expect("project_did is not set")
         };
-        let payload = service
-            .generate(&project_did, &json!(request), None, request.verified_at)
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
+
+        let payload = self
+            .didcomm_service
+            .generate(
+                &my_did,
+                &project_did,
+                &my_keyring,
+                &json!(request),
+                None,
+                request.verified_at,
+            )
             .await
             .context("failed to generate payload")?;
         let payload = serde_json::to_string(&payload).context("failed to serialize")?;
@@ -324,11 +362,50 @@ impl MessageActivityRepository for Studio {
     }
 }
 
+#[derive(Serialize)]
+struct MetricStr {
+    metric_type: String,
+    value: f32,
+}
+
+#[derive(Serialize)]
+struct MetricsWithTimestampStr {
+    timestamp: chrono::DateTime<chrono::Utc>,
+    metrics: Vec<MetricStr>,
+}
+
 #[async_trait::async_trait]
 impl MetricStoreRepository for Studio {
-    async fn save(&self, request: MetricStoreRequest) -> anyhow::Result<()> {
-        let payload = serde_json::to_string(&request).expect("failed to serialize");
-        let res = self.http_client.post("/v1/metric", &payload).await?;
+    async fn save(&self, request: Vec<MetricsWithTimestamp>) -> anyhow::Result<()> {
+        let metrics_str = request
+            .into_iter()
+            .map(|m| MetricsWithTimestampStr {
+                timestamp: m.timestamp,
+                metrics: m
+                    .metrics
+                    .into_iter()
+                    .map(|metric| MetricStr {
+                        metric_type: metric.metric_type.to_string(),
+                        value: metric.value,
+                    })
+                    .collect::<Vec<MetricStr>>(),
+            })
+            .collect::<Vec<MetricsWithTimestampStr>>();
+
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
+        let payload = self
+            .vc_service
+            .generate(
+                &my_did,
+                &my_keyring,
+                &json!(metrics_str),
+                chrono::Utc::now(),
+            )
+            .context("failed to generate payload")?;
+
+        let payload = serde_json::to_string(&payload).context("failed to serialize")?;
+        let res = self.http_client.post("/v1/metrics", &payload).await?;
 
         let status = res.status();
         let json: Value = res.json().await.context("Failed to read response body")?;
@@ -337,12 +414,116 @@ impl MetricStoreRepository for Studio {
         } else {
             "".to_string()
         };
-
         match status {
             reqwest::StatusCode::OK => Ok(()),
             reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
             reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
                 anyhow::bail!("StatusCode=500, {}", message);
+            }
+            other => anyhow::bail!("StatusCode={other}, {}", message),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl EventStoreRepository for Studio {
+    async fn save(&self, request: EventStoreRequest) -> anyhow::Result<()> {
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
+        let payload = self
+            .vc_service
+            .generate(&my_did, &my_keyring, &json!(&request), chrono::Utc::now())
+            .context("failed to generate payload")?;
+        let payload = serde_json::to_string(&payload).context("failed to serialize")?;
+
+        async fn send(
+            studio: &Studio,
+            payload: String,
+        ) -> anyhow::Result<(reqwest::StatusCode, String)> {
+            let res = studio.http_client.post("/v1/events", &payload).await?;
+
+            let status = res.status();
+            let json: Value = res.json().await.context("Failed to read response body")?;
+            let message = if let Some(message) = json.get("message").map(|v| v.to_string()) {
+                message
+            } else {
+                "".to_string()
+            };
+
+            Ok((status, message))
+        }
+
+        let (status, message) = send(self, payload.clone()).await?;
+
+        match status {
+            reqwest::StatusCode::OK => Ok(()),
+            reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
+                // retry once
+                log::info!("failed to send event: {}, retrying...", message);
+                let (status, message) = send(self, payload).await?;
+                match status {
+                    reqwest::StatusCode::OK => Ok(()),
+                    reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
+                    reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
+                        anyhow::bail!("StatusCode=500, {}", message);
+                    }
+                    other => anyhow::bail!("StatusCode={other}, {}", message),
+                }
+            }
+            other => anyhow::bail!("StatusCode={other}, {}", message),
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl CustomMetricStoreRepository for Studio {
+    async fn save(&self, request: CustomMetricStoreRequest) -> anyhow::Result<()> {
+        let my_did = self.did_accessor.get_my_did();
+        let my_keyring = self.did_accessor.get_my_keyring();
+        let payload = self
+            .vc_service
+            .generate(&my_did, &my_keyring, &json!(&request), chrono::Utc::now())
+            .context("failed to generate payload")?;
+        let payload = serde_json::to_string(&payload).context("failed to serialize")?;
+
+        async fn send(
+            studio: &Studio,
+            payload: String,
+        ) -> anyhow::Result<(reqwest::StatusCode, String)> {
+            let res = studio
+                .http_client
+                .post("/v1/custom_metrics", &payload)
+                .await?;
+
+            let status = res.status();
+            let json: Value = res.json().await.context("Failed to read response body")?;
+            let message = if let Some(message) = json.get("message").map(|v| v.to_string()) {
+                message
+            } else {
+                "".to_string()
+            };
+
+            Ok((status, message))
+        }
+
+        let (status, message) = send(self, payload.clone()).await?;
+
+        match status {
+            reqwest::StatusCode::OK => Ok(()),
+            reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
+            reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
+                // retry once
+                log::info!("failed to send custom_metric: {}, retrying...", message);
+                let (status, message) = send(self, payload).await?;
+                match status {
+                    reqwest::StatusCode::OK => Ok(()),
+                    reqwest::StatusCode::NOT_FOUND => anyhow::bail!("StatusCode=404, {}", message),
+                    reqwest::StatusCode::INTERNAL_SERVER_ERROR => {
+                        anyhow::bail!("StatusCode=500, {}", message);
+                    }
+                    other => anyhow::bail!("StatusCode={other}, {}", message),
+                }
             }
             other => anyhow::bail!("StatusCode={other}, {}", message),
         }

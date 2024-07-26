@@ -2,40 +2,40 @@ use anyhow::Context;
 use chrono::{DateTime, Utc};
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    nodex::schema::general::GeneralVcDataModel,
+    nodex::utils::did_accessor::DidAccessor,
     repository::message_activity_repository::{
         CreatedMessageActivityRequest, MessageActivityHttpError, MessageActivityRepository,
         VerifiedMessageActivityRequest, VerifiedStatus,
     },
-    services::{internal::didcomm_encrypted::*, project_verifier::ProjectVerifier},
+    services::project_verifier::ProjectVerifier,
+};
+use nodex_didcomm::{
+    did::did_repository::DidRepository,
+    didcomm::{
+        encrypted::{
+            DIDCommEncryptedService, DIDCommEncryptedServiceGenerateError,
+            DIDCommEncryptedServiceVerifyError,
+        },
+        types::DIDCommMessage,
+    },
+    verifiable_credentials::types::VerifiableCredentials,
 };
 
-pub struct DidcommMessageUseCase {
-    project_verifier: Box<dyn ProjectVerifier + Send + Sync + 'static>,
-    message_activity_repository: Box<dyn MessageActivityRepository + Send + Sync + 'static>,
-    didcomm_encrypted_service: DIDCommEncryptedService,
-}
-
-impl DidcommMessageUseCase {
-    pub fn new<
-        V: ProjectVerifier + Send + Sync + 'static,
-        R: MessageActivityRepository + Send + Sync + 'static,
-    >(
-        project_verifier: V,
-        message_activity_repository: R,
-        didcomm_encrypted_service: DIDCommEncryptedService,
-    ) -> DidcommMessageUseCase {
-        DidcommMessageUseCase {
-            project_verifier: Box::new(project_verifier),
-            message_activity_repository: Box::new(message_activity_repository),
-            didcomm_encrypted_service,
-        }
-    }
+pub struct DidcommMessageUseCase<V, R, D, A>
+where
+    V: ProjectVerifier,
+    R: MessageActivityRepository,
+    D: DidRepository,
+    A: DidAccessor,
+{
+    project_verifier: V,
+    message_activity_repository: R,
+    didcomm_encrypted_service: DIDCommEncryptedService<D>,
+    did_accessor: A,
 }
 
 #[derive(Debug, Error)]
@@ -76,7 +76,27 @@ pub enum VerifyDidcommMessageUseCaseError {
     Other(#[from] anyhow::Error),
 }
 
-impl DidcommMessageUseCase {
+impl<V, R, D, A> DidcommMessageUseCase<V, R, D, A>
+where
+    V: ProjectVerifier,
+    R: MessageActivityRepository,
+    D: DidRepository,
+    A: DidAccessor,
+{
+    pub fn new(
+        project_verifier: V,
+        message_activity_repository: R,
+        didcomm_encrypted_service: DIDCommEncryptedService<D>,
+        did_accessor: A,
+    ) -> Self {
+        DidcommMessageUseCase {
+            project_verifier,
+            message_activity_repository,
+            didcomm_encrypted_service,
+            did_accessor,
+        }
+    }
+
     pub async fn generate(
         &self,
         destination_did: String,
@@ -85,7 +105,6 @@ impl DidcommMessageUseCase {
         now: DateTime<Utc>,
     ) -> Result<String, GenerateDidcommMessageUseCaseError> {
         let message_id = Uuid::new_v4();
-        let my_did = super::get_my_did();
 
         let message = EncodedMessage {
             message_id,
@@ -94,13 +113,20 @@ impl DidcommMessageUseCase {
             project_hmac: self.project_verifier.create_project_hmac()?,
         };
         let message = serde_json::to_value(message).context("failed to convert to value")?;
-
+        let my_did = self.did_accessor.get_my_did();
         let didcomm_message = self
             .didcomm_encrypted_service
-            .generate(&destination_did, &message, None, now)
+            .generate(
+                &self.did_accessor.get_my_did(),
+                &destination_did,
+                &self.did_accessor.get_my_keyring(),
+                &message,
+                None,
+                now,
+            )
             .await
             .map_err(|e| match e {
-                DIDCommEncryptedServiceError::DIDNotFound(d) => {
+                DIDCommEncryptedServiceGenerateError::DIDNotFound(d) => {
                     GenerateDidcommMessageUseCaseError::TargetDidNotFound(d)
                 }
                 _ => GenerateDidcommMessageUseCaseError::Other(e.into()),
@@ -147,16 +173,17 @@ impl DidcommMessageUseCase {
         &self,
         message: &str,
         now: DateTime<Utc>,
-    ) -> Result<GeneralVcDataModel, VerifyDidcommMessageUseCaseError> {
-        let message = serde_json::from_str::<Value>(message).context("failed to decode str")?;
+    ) -> Result<VerifiableCredentials, VerifyDidcommMessageUseCaseError> {
+        let message =
+            serde_json::from_str::<DIDCommMessage>(message).context("failed to decode str")?;
         let verified = self
             .didcomm_encrypted_service
-            .verify(&message)
+            .verify(&self.did_accessor.get_my_keyring(), &message)
             .await
             .map_err(|e| {
                 log::debug!("{}", &e);
                 match e {
-                    DIDCommEncryptedServiceError::DIDNotFound(d) => {
+                    DIDCommEncryptedServiceVerifyError::DIDNotFound(d) => {
                         VerifyDidcommMessageUseCaseError::TargetDidNotFound(d)
                     }
                     _ => VerifyDidcommMessageUseCaseError::Other(e.into()),
@@ -167,7 +194,7 @@ impl DidcommMessageUseCase {
 
         let from_did = verified.issuer.id.clone();
         // check in verified. maybe exists?
-        let my_did = super::get_my_did();
+        let my_did = self.did_accessor.get_my_did();
 
         let container = verified.clone().credential_subject.container;
 
@@ -250,49 +277,49 @@ struct EncodedMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::did_repository::DidRepository as _;
-    use crate::usecase::get_my_did;
-    use crate::{
-        nodex::sidetree::payload::DIDResolutionResponse,
-        services::project_verifier::ProjectVerifier,
-    };
-    use crate::{
-        services::internal::did_vc::DIDVCService,
-        usecase::{
-            didcomm_message_usecase::DidcommMessageUseCase, verifiable_message_usecase::tests::*,
-        },
-    };
+    use crate::nodex::utils::did_accessor::mocks::MockDIDAccessor;
+    use crate::repository::did_repository::mocks::MockDidRepository;
+    use crate::repository::message_activity_repository::mocks::MockMessageActivityRepository;
+    use crate::services::project_verifier::mocks::MockProjectVerifier;
+
+    use crate::usecase::didcomm_message_usecase::DidcommMessageUseCase;
+    use crate::usecase::test_util::TestPresets;
+    use nodex_didcomm::didcomm::encrypted::DIDCommEncryptedService;
+
     use serde_json;
 
     #[tokio::test]
     async fn test_create_and_verify() {
-        // generate local did and keys
-        let repository = MockDidRepository {};
-        let _did = repository.create_identifier().await.unwrap();
-        dbg!(&_did);
+        let presets = TestPresets::default();
+
+        let service = DIDCommEncryptedService::new(presets.create_mock_did_repository(), None);
 
         let usecase = DidcommMessageUseCase::new(
-            MockProjectVerifier {},
-            MockActivityRepository {},
-            DIDCommEncryptedService::new(
-                MockDidRepository {},
-                DIDVCService::new(MockDidRepository {}),
-            ),
+            MockProjectVerifier::create_success(),
+            MockMessageActivityRepository::create_success(),
+            service.clone(),
+            MockDIDAccessor::new(presets.from_did, presets.from_keyring),
         );
 
-        let destination_did = get_my_did();
         let message = "Hello".to_string();
 
         let now = Utc::now();
         let generated = usecase
             .generate(
-                destination_did.clone(),
+                presets.to_did.clone(),
                 message.clone(),
                 "test".to_string(),
                 now,
             )
             .await
             .unwrap();
+
+        let usecase = DidcommMessageUseCase::new(
+            MockProjectVerifier::verify_success(),
+            MockMessageActivityRepository::verify_success(),
+            service,
+            MockDIDAccessor::new(presets.to_did, presets.to_keyring),
+        );
 
         let verified = usecase.verify(&generated, Utc::now()).await.unwrap();
         let encoded_message =
@@ -302,41 +329,29 @@ mod tests {
     }
 
     mod generate_failed {
+        use crate::{
+            nodex::utils::did_accessor::mocks::MockDIDAccessor,
+            services::project_verifier::mocks::MockProjectVerifier,
+        };
+
         use super::*;
-        use crate::repository::did_repository::DidRepository;
 
         #[tokio::test]
         async fn test_generate_did_not_found() {
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
+            let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier {},
-                MockActivityRepository {},
-                DIDCommEncryptedService::new(
-                    NotFoundDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::create_success(),
+                MockMessageActivityRepository::create_success(),
+                DIDCommEncryptedService::new(MockDidRepository::empty(), None),
+                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
             );
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did.clone(), message, "test".to_string(), now)
                 .await;
 
             if let Err(GenerateDidcommMessageUseCaseError::TargetDidNotFound(_)) = generated {
@@ -347,32 +362,20 @@ mod tests {
 
         #[tokio::test]
         async fn test_generate_create_project_hmac_failed() {
-            struct CreateProjectHmacFailedVerifier {}
-
-            impl ProjectVerifier for CreateProjectHmacFailedVerifier {
-                fn create_project_hmac(&self) -> anyhow::Result<String> {
-                    Err(anyhow::anyhow!("create project hmac failed"))
-                }
-                fn verify_project_hmac(&self, _signature: &str) -> anyhow::Result<bool> {
-                    unreachable!()
-                }
-            }
+            let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                CreateProjectHmacFailedVerifier {},
-                MockActivityRepository {},
-                DIDCommEncryptedService::new(
-                    MockDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::create_failed(),
+                MockMessageActivityRepository::create_success(),
+                DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
+                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
             );
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did.clone(), message, "test".to_string(), now)
                 .await;
 
             if let Err(GenerateDidcommMessageUseCaseError::Other(_)) = generated {
@@ -383,42 +386,20 @@ mod tests {
 
         #[tokio::test]
         async fn test_generate_add_activity_failed() {
-            struct CreateActivityFailedRepository {}
-
-            #[async_trait::async_trait]
-            impl MessageActivityRepository for CreateActivityFailedRepository {
-                async fn add_create_activity(
-                    &self,
-                    _request: CreatedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    Err(MessageActivityHttpError::Other(anyhow::anyhow!(
-                        "create activity failed"
-                    )))
-                }
-
-                async fn add_verify_activity(
-                    &self,
-                    _request: VerifiedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    unreachable!()
-                }
-            }
+            let presets = TestPresets::default();
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier {},
-                CreateActivityFailedRepository {},
-                DIDCommEncryptedService::new(
-                    MockDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::create_success(),
+                MockMessageActivityRepository::create_fail(),
+                DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
+                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
             );
 
-            let destination_did = "did:example:123".to_string();
             let message = "Hello".to_string();
 
             let now = Utc::now();
             let generated = usecase
-                .generate(destination_did, message, "test".to_string(), now)
+                .generate(presets.to_did.clone(), message, "test".to_string(), now)
                 .await;
 
             if let Err(GenerateDidcommMessageUseCaseError::Other(_)) = generated {
@@ -430,24 +411,26 @@ mod tests {
 
     mod verify_failed {
         use super::*;
-        use crate::repository::did_repository::DidRepository;
+        use crate::{
+            nodex::utils::did_accessor::mocks::MockDIDAccessor,
+            services::project_verifier::mocks::MockProjectVerifier,
+        };
 
-        async fn create_test_message_for_verify_test() -> String {
+        async fn create_test_message_for_verify_test(presets: TestPresets) -> String {
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier {},
-                MockActivityRepository {},
-                DIDCommEncryptedService::new(
-                    MockDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::create_success(),
+                MockMessageActivityRepository::create_success(),
+                DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
+                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
             );
 
-            let destination_did = get_my_did();
             let message = "Hello".to_string();
+
             let now = Utc::now();
+
             usecase
                 .generate(
-                    destination_did.clone(),
+                    presets.to_did.clone(),
                     message.clone(),
                     "test".to_string(),
                     now,
@@ -458,35 +441,16 @@ mod tests {
 
         #[tokio::test]
         async fn test_verify_did_not_found() {
-            // generate local did and keys
-            let repository = MockDidRepository {};
-            repository.create_identifier().await.unwrap();
-
-            struct NotFoundDidRepository {}
-
-            #[async_trait::async_trait]
-            impl DidRepository for NotFoundDidRepository {
-                async fn create_identifier(&self) -> anyhow::Result<DIDResolutionResponse> {
-                    unreachable!()
-                }
-                async fn find_identifier(
-                    &self,
-                    _did: &str,
-                ) -> anyhow::Result<Option<DIDResolutionResponse>> {
-                    Ok(None)
-                }
-            }
+            let presets = TestPresets::default();
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier {},
-                MockActivityRepository {},
-                DIDCommEncryptedService::new(
-                    NotFoundDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::verify_success(),
+                MockMessageActivityRepository::verify_success(),
+                DIDCommEncryptedService::new(MockDidRepository::empty(), None),
+                MockDIDAccessor::new(presets.to_did, presets.to_keyring),
             );
 
-            let generated = create_test_message_for_verify_test().await;
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyDidcommMessageUseCaseError::TargetDidNotFound(_)) = verified {
@@ -497,37 +461,16 @@ mod tests {
 
         #[tokio::test]
         async fn test_verify_add_activity_failed() {
-            struct VerifyActivityFailedRepository {}
-
-            #[async_trait::async_trait]
-            impl MessageActivityRepository for VerifyActivityFailedRepository {
-                async fn add_create_activity(
-                    &self,
-                    _request: CreatedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    unreachable!()
-                }
-
-                async fn add_verify_activity(
-                    &self,
-                    _request: VerifiedMessageActivityRequest,
-                ) -> Result<(), MessageActivityHttpError> {
-                    Err(MessageActivityHttpError::Other(anyhow::anyhow!(
-                        "verify activity failed"
-                    )))
-                }
-            }
+            let presets = TestPresets::default();
+            let generated = create_test_message_for_verify_test(presets.clone()).await;
 
             let usecase = DidcommMessageUseCase::new(
-                MockProjectVerifier {},
-                VerifyActivityFailedRepository {},
-                DIDCommEncryptedService::new(
-                    MockDidRepository {},
-                    DIDVCService::new(MockDidRepository {}),
-                ),
+                MockProjectVerifier::verify_success(),
+                MockMessageActivityRepository::verify_fail(),
+                DIDCommEncryptedService::new(presets.create_mock_did_repository(), None),
+                MockDIDAccessor::new(presets.from_did, presets.from_keyring),
             );
 
-            let generated = create_test_message_for_verify_test().await;
             let verified = usecase.verify(&generated, Utc::now()).await;
 
             if let Err(VerifyDidcommMessageUseCaseError::Other(_)) = verified {

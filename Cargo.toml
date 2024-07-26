@@ -11,7 +11,7 @@ license-file = "LICENSE"
 name = "nodex"
 readme = "README.md"
 repository = "https://github.com/nodecross/nodex"
-version = "2.0.2"
+version = "2.2.0"
 
 [workspace]
 members = ["e2e"]
@@ -27,19 +27,21 @@ default = ["std"]
 std = []
 
 [dependencies]
+actix = { version = "0.13.3" }
 actix-rt = { version = "2.9.0" }
 actix-web = { version = "4.5.1" }
+actix-web-actors = { version = "4.3.0" }
 aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs.git", tag = "aes-gcm-siv-v0.11.0-pre" }
 anyhow = "1.0.81"
 arrayref = { version = "0.3.7" }
 async-trait = { version = "0.1.80" }
 base64 = { version = "0.22.0" }
-chrono = { version = "0.4" }
+bytes = "1.6.0"
+chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5.2", features = ["cargo", "derive"] }
+colored = { version = "2" }
 cuid = { version = "1.3.2" }
-daemonize = "0.5.0"
 data-encoding = { version = "2.5.0" }
-didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.0" }
 digest = { version = "0.10.7" }
 dirs = { version = "5.0.1" }
 dotenvy = "0.15.7"
@@ -61,11 +63,14 @@ libloading = { version = "0.8.3" }
 log = { version = "0.4.21" }
 mac_address = "1.1.5"
 nix = { version = "0.28.0", features = ["signal"] }
+nodex-didcomm = { git = "https://github.com/nodecross/nodex-didcomm", tag = "0.1.1" }
+qstring = { version = "0.7.2" }
 reqwest = { version = "0.12", features = [
     "json",
     "rustls-tls",
 ], default-features = false }
 rumqttc = { version = "0.24.0" }
+scrypt = { version = "0.11.0", features = ["simple"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_jcs = { version = "0.1.0" }
 serde_json = { version = "1.0.116" }
@@ -81,7 +86,17 @@ uuid = { version = "1.8.0", features = [
     "v4",
 ] }
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
-zip-extract = "0.1.3"
+zip = "2.1.0"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.56.0", features = [
+    "Win32_Foundation",
+    "Win32_System_Threading",
+] }
+
+[target.'cfg(unix)'.dependencies]
+daemonize = "0.5.0"
+nix = { version = "0.29.0", features = ["signal"] }
 
 [dev-dependencies]
 rstest = { version = "0.18.2" }

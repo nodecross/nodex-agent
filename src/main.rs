@@ -1,16 +1,20 @@
 extern crate env_logger;
 
 use crate::{config::ServerConfig, controllers::public::nodex_receive};
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 use dotenvy::dotenv;
 use handlers::Command;
 use handlers::MqttClient;
 use mac_address::get_mac_address;
+#[cfg(unix)]
 use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
+use repository::metric_repository::MetricsCacheRepository;
 use rumqttc::{AsyncClient, MqttOptions, QoS};
+use services::metrics::{MetricsInMemoryCacheService, MetricsWatchService};
 use services::nodex::NodeX;
 use services::studio::Studio;
 use shadow_rs::shadow;
@@ -19,9 +23,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::{collections::HashMap, fs, sync::Arc};
 use sysinfo::{get_current_pid, System};
 use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 use tokio::sync::Notify;
 use tokio::sync::RwLock;
 use tokio::time::Duration;
+
+#[cfg(windows)]
+use windows::Win32::{
+    Foundation::{CloseHandle, GetLastError},
+    System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE},
+};
+
 use usecase::metric_usecase::MetricUsecase;
 
 mod config;
@@ -150,8 +162,6 @@ async fn main() -> std::io::Result<()> {
     studio_initialize(device_did.did_document.id.clone()).await;
     send_device_info().await;
 
-    let sock_path = runtime_dir.clone().join("nodex.sock");
-
     // NOTE: connect mqtt server
     let mqtt_host = "demo-mqtt.getnodex.io";
     let mqtt_port = 1883;
@@ -172,13 +182,30 @@ async fn main() -> std::io::Result<()> {
         .unwrap();
     log::info!("subscribed: {}", studio_did_topic);
 
-    let should_stop = Arc::new(AtomicBool::new(false));
+    let shutdown_notify = Arc::new(Notify::new());
 
-    let mut metric_usecase = MetricUsecase::new(should_stop.clone());
-    tokio::spawn(async move {
-        metric_usecase.start_collect_metric().await;
-        log::info!("Metric usecase has been successfully stopped.");
-    });
+    let cache_repository = Arc::new(Mutex::new(MetricsInMemoryCacheService::new()));
+    let collect_task = {
+        let mut metric_usecase = MetricUsecase::new(
+            Box::new(Studio::new()),
+            Box::new(MetricsWatchService::new()),
+            app_config(),
+            Arc::clone(&cache_repository),
+            Arc::clone(&shutdown_notify),
+        );
+        tokio::spawn(async move { metric_usecase.collect_task().await })
+    };
+
+    let send_task = {
+        let mut metric_usecase = MetricUsecase::new(
+            Box::new(Studio::new()),
+            Box::new(MetricsWatchService::new()),
+            app_config(),
+            Arc::clone(&cache_repository),
+            Arc::clone(&shutdown_notify),
+        );
+        tokio::spawn(async move { metric_usecase.send_task().await })
+    };
 
     // NOTE: booting...
     let (tx, rx) = mpsc::channel::<Command>(32);
@@ -186,10 +213,21 @@ async fn main() -> std::io::Result<()> {
 
     let transfer_client = Box::new(MqttClient::new(tx));
 
-    let server = server::new_server(&sock_path, transfer_client);
-    let server_handle = server.handle();
+    #[cfg(unix)]
+    let server = {
+        let sock_path = runtime_dir.clone().join("nodex.sock");
+        server::new_uds_server(&sock_path, transfer_client)
+    };
 
-    let shutdown_notify = Arc::new(Notify::new());
+    #[cfg(windows)]
+    let server = {
+        let port_str =
+            env::var("NODEX_SERVER_PORT").expect("NODEX_SERVER_PORT must be set and valid.");
+        let port = validate_port(&port_str).expect("Invalid port number.");
+        server::new_web_server(port, transfer_client)
+    };
+
+    let server_handle = server.handle();
 
     let message_polling_task =
         tokio::spawn(nodex_receive::polling_task(Arc::clone(&shutdown_notify)));
@@ -202,6 +240,7 @@ async fn main() -> std::io::Result<()> {
         mqtt_topic,
     ));
 
+    let should_stop = Arc::new(AtomicBool::new(false));
     let shutdown = tokio::spawn(async move {
         handle_signals(should_stop.clone()).await;
 
@@ -212,12 +251,27 @@ async fn main() -> std::io::Result<()> {
         log::info!("Agent has been successfully stopped.");
     });
 
-    match tokio::try_join!(server_task, sender_task, message_polling_task, shutdown) {
+    match tokio::try_join!(
+        server_task,
+        sender_task,
+        message_polling_task,
+        collect_task,
+        send_task,
+        shutdown
+    ) {
         Ok(_) => Ok(()),
         Err(e) => {
             log::error!("{:?}", e);
             panic!()
         }
+    }
+}
+
+#[cfg(windows)]
+fn validate_port(port_str: &str) -> Result<u16, String> {
+    match port_str.parse::<u16>() {
+        Ok(port) if (1024..=65535).contains(&port) => Ok(port),
+        _ => Err("Port number must be an integer between 1024 and 65535.".to_string()),
     }
 }
 
@@ -240,12 +294,13 @@ async fn handle_signals(should_stop: Arc<AtomicBool>) {
     }
 }
 
-#[cfg(not(unix))]
-async fn handle_signals() {
+#[cfg(windows)]
+async fn handle_signals(should_stop: Arc<AtomicBool>) {
     tokio::signal::ctrl_c()
         .await
         .expect("Failed to listen for Ctrl+C");
     log::info!("Received Ctrl+C");
+    should_stop.store(true, Ordering::Relaxed);
 }
 
 fn use_cli(command: Option<Commands>, did: String) {
@@ -381,7 +436,12 @@ fn kill_other_self_process() {
             let mut system = System::new_all();
             system.refresh_all();
 
-            for process in system.processes_by_exact_name("nodex-agent") {
+            #[cfg(unix)]
+            let process_name = { "nodex-agent" };
+            #[cfg(windows)]
+            let process_name = { "nodex-agent.exe" };
+
+            for process in system.processes_by_exact_name(process_name) {
                 if current_pid == process.pid() {
                     continue;
                 }
@@ -389,18 +449,10 @@ fn kill_other_self_process() {
                     continue;
                 }
 
-                let pid_as_i32 = process.pid().as_u32() as i32;
-                match kill(Pid::from_raw(pid_as_i32), Signal::SIGTERM) {
-                    Ok(_) => log::info!(
-                        "nodex Process with PID: {} killed successfully.",
-                        pid_as_i32
-                    ),
-                    Err(e) => log::error!(
-                        "Failed to kill nodex process with PID: {}. Error: {}",
-                        pid_as_i32,
-                        e
-                    ),
-                };
+                let pid = process.pid().as_u32();
+                if let Err(e) = kill_process(pid) {
+                    log::error!("Failed to kill process with PID: {}. Error: {:?}", pid, e);
+                }
             }
         }
         Err(e) => {
@@ -408,4 +460,46 @@ fn kill_other_self_process() {
             panic!()
         }
     }
+}
+#[cfg(unix)]
+fn kill_process(pid: u32) -> Result<(), anyhow::Error> {
+    kill(Pid::from_raw(pid as i32), Signal::SIGTERM).map_err(|e| {
+        anyhow!(
+            "Failed to kill nodex process with PID: {}. Error: {}",
+            pid,
+            e
+        )
+    })?;
+    log::info!("nodex Process with PID: {} killed successfully.", pid);
+    Ok(())
+}
+
+#[cfg(windows)]
+fn kill_process(pid: u32) -> Result<(), anyhow::Error> {
+    unsafe {
+        let handle = OpenProcess(PROCESS_TERMINATE, false, pid)?;
+        if handle.is_invalid() {
+            return Err(anyhow!(
+                "Failed to open process with PID: {}. Invalid handle.",
+                pid
+            ));
+        }
+
+        match TerminateProcess(handle, 1) {
+            Ok(_) => {
+                log::info!("nodex Process with PID: {} killed successfully.", pid);
+            }
+            Err(e) => {
+                CloseHandle(handle);
+                return Err(anyhow!(
+                    "Failed to terminate process with PID: {}. Error: {:?}",
+                    pid,
+                    GetLastError()
+                ));
+            }
+        };
+        CloseHandle(handle);
+    }
+
+    Ok(())
 }

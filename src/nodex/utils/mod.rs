@@ -1,3 +1,3 @@
-pub mod http_client;
-pub mod json;
+pub mod did_accessor;
+pub mod sidetree_client;
 pub mod studio_client;

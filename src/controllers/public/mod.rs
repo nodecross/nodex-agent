@@ -5,3 +5,5 @@ pub mod nodex_find_identifier;
 pub mod nodex_receive;
 pub mod nodex_verify_didcomm_message;
 pub mod nodex_verify_verifiable_message;
+pub mod send_custom_metric;
+pub mod send_event;

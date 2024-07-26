@@ -2,36 +2,34 @@ version: "3.9"
 
 services:
   sidetree_prism:
-    image: stoplight/prism:4
-    command: "mock -h 0.0.0.0 /tmp/api.yaml"
+    image: stoplight/prism:5.8.1
     platform: linux/amd64
     volumes:
       - ./did_sidetree.yaml:/tmp/api.yaml:ro
     ports:
       - "4010:4010"
     healthcheck:
-      # this docker image doens't have curl
-      test: wget --no-verbose --tries=1 --spider http://localhost:4010/health || exit 1
+      test: ["CMD-SHELL", "curl -f http://localhost:4010/health || exit 1"]
       interval: 5s
       timeout: 30s
       retries: 5
       start_period: 10s
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl && chmod +x /usr/local/bin/prism && prism mock -h 0.0.0.0 /tmp/api.yaml"]
 
   studio_prism:
-    image: stoplight/prism:4
-    command: "mock -h 0.0.0.0 /tmp/api.yaml"
+    image: stoplight/prism:5.8.1
     platform: linux/amd64
     volumes:
       - ./studio.yaml:/tmp/api.yaml:ro
     ports:
       - "8020:4010"
     healthcheck:
-      # this docker image doens't have curl
-      test: wget --no-verbose --tries=1 --spider http://localhost:4010/health || exit 1
+      test: ["CMD-SHELL", "curl -f http://localhost:4010/health || exit 1"]
       interval: 5s
       timeout: 30s
       retries: 5
       start_period: 10s
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl && chmod +x /usr/local/bin/prism && prism mock -h 0.0.0.0 /tmp/api.yaml"]
 
   systemd_test:
     depends_on:
