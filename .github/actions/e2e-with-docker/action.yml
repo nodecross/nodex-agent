@@ -25,7 +25,11 @@ runs:
     - name: (run) e2e tests
       shell: bash
       run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e run e2e_runner cargo test
-    
+
+    - name: (run) e2e proxy tests
+      shell: bash
+      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e run e2e_runner_proxy cargo test
+
     - name: (run) install procps in agent container
       shell: bash
       run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e exec e2e_agent bash -c "apt-get update && apt-get install -y procps"

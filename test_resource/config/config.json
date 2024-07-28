@@ -23,6 +23,10 @@
     "secure_keystore": null,
     "cipher": null
   },
+  "metrics": {
+    "collect_interval": 15,
+    "send_interval": 60
+  },
   "is_initialized": true,
   "schema_version": 1
 }

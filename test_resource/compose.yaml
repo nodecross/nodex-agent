@@ -1,4 +1,31 @@
-version: "3.9"
+x-environment: &environment
+    NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
+    NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
+    NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
+    RUST_BACKTRACE: 1
+
+x-environment-proxy: &environment-proxy
+    <<: *environment
+    HTTP_PROXY: http://proxy:3128
+    HTTPS_PROXY: https://proxy:3129
+
+x-depends_on: &depends_on
+    sidetree_prism:
+      condition: service_healthy
+    studio_prism:
+      condition: service_healthy
+
+x-runner: &runner
+    depends_on: *depends_on
+    image: rust:slim-buster
+    platform: linux/amd64
+    volumes:
+      - ./config:/root/.config/nodex/
+      - agent_socket:/root/.nodex/
+      - ../:/tmp
+    working_dir: /tmp/e2e
+    profiles:
+      - e2e
 
 services:
   sidetree_prism:
@@ -32,11 +59,7 @@ services:
     entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl && chmod +x /usr/local/bin/prism && prism mock -h 0.0.0.0 /tmp/api.yaml"]
 
   systemd_test:
-    depends_on:
-      sidetree_prism:
-        condition: service_healthy
-      studio_prism:
-        condition: service_healthy
+    depends_on: *depends_on
     build:
       context: .
       dockerfile: systemd/Dockerfile
@@ -48,11 +71,7 @@ services:
       - agent_socket:/root/.nodex/
 
   e2e_agent:
-    depends_on:
-      sidetree_prism:
-        condition: service_healthy
-      studio_prism:
-        condition: service_healthy
+    depends_on: *depends_on
     image: ubuntu:20.04
     platform: linux/amd64
     volumes:
@@ -60,32 +79,50 @@ services:
       - agent_socket:/root/.nodex/
       - ./nodex-agent:/tmp/nodex-agent
     command: /tmp/nodex-agent
-    environment:
-      NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
-      NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
-      NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
-      RUST_BACKTRACE: 1
+    environment: *environment
     profiles:
       - e2e
 
-  e2e_runner:
+  e2e_runner: *runner
+
+  e2e_agent_proxy:
     depends_on:
-      sidetree_prism:
-        condition: service_healthy
-      studio_prism:
-        condition: service_healthy
-    image: rust:slim-buster
+      <<: *depends_on
+      proxy:
+        condition: service_started
+    build:
+      context: ./squid
     platform: linux/amd64
     volumes:
       - ./config:/root/.config/nodex/
-      - agent_socket:/root/.nodex/
+      - agent_socket_proxy:/root/.nodex/
+      - ./nodex-agent:/tmp/nodex-agent
+    command: /tmp/nodex-agent
+    environment: *environment-proxy
+    profiles:
+      - e2e
+
+  e2e_runner_proxy:
+    <<: *runner
+    volumes:
+      - ./config:/root/.config/nodex/
+      - agent_socket_proxy:/root/.nodex/
       - ../:/tmp
-    working_dir: /tmp/e2e
+
+  proxy:
+    image: ubuntu/squid:5.7-23.04_beta
     environment:
-      NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
-      NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
-      NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
-      RUST_BACKTRACE: 1
+      - TZ=UTC
+    volumes:
+      - ./squid/conf/squid.conf:/etc/squid/squid.conf
+      - ./squid/fixtures/:/fixtures/
+    ports:
+      - "3128:3128"
+      - "3129:3129"
+    ulimits:
+      nofile:
+        soft: "65536"
+        hard: "65536"
     profiles:
       - e2e
 
@@ -95,3 +132,4 @@ networks:
 
 volumes:
   agent_socket:
+  agent_socket_proxy:
