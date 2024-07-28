@@ -1,63 +1,82 @@
-x-environment: &environment
-    NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
-    NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
-    NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
-    RUST_BACKTRACE: 1
-
-x-environment-proxy: &environment-proxy
-    <<: *environment
-    HTTP_PROXY: http://proxy:3128
-    HTTPS_PROXY: https://proxy:3129
-
 x-depends_on: &depends_on
-    sidetree_prism:
-      condition: service_healthy
-    studio_prism:
-      condition: service_healthy
-
-x-runner: &runner
-    depends_on: *depends_on
-    image: rust:slim-buster
-    platform: linux/amd64
-    volumes:
-      - ./config:/root/.config/nodex/
-      - agent_socket:/root/.nodex/
-      - ../:/tmp
-    working_dir: /tmp/e2e
-    profiles:
-      - e2e
-
+  sidetree_prism:
+    condition: service_healthy
+  studio_prism:
+    condition: service_healthy
+x-depends_on_proxy: &depends_on_proxy
+  !!merge <<: *depends_on
+  proxy:
+    condition: service_healthy
+  nginx:
+    condition: service_healthy
 services:
   sidetree_prism:
     image: stoplight/prism:5.8.1
     platform: linux/amd64
     volumes:
       - ./did_sidetree.yaml:/tmp/api.yaml:ro
-    ports:
-      - "4010:4010"
+    expose:
+      - "4010"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:4010/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://sidetree_prism:4010/health || exit 1"]
       interval: 5s
       timeout: 30s
       retries: 5
       start_period: 10s
     entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl && chmod +x /usr/local/bin/prism && prism mock -h 0.0.0.0 /tmp/api.yaml"]
-
   studio_prism:
     image: stoplight/prism:5.8.1
     platform: linux/amd64
     volumes:
       - ./studio.yaml:/tmp/api.yaml:ro
-    ports:
-      - "8020:4010"
+    expose:
+      - "4010"
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:4010/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://studio_prism:4010/health || exit 1"]
       interval: 5s
       timeout: 30s
       retries: 5
       start_period: 10s
     entrypoint: ["/bin/sh", "-c", "apk add --no-cache curl && chmod +x /usr/local/bin/prism && prism mock -h 0.0.0.0 /tmp/api.yaml"]
-
+  nginx:
+    image: nginx:mainline
+    volumes:
+      # Override default config to act as TLS proxy
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Self-signed certificates etc in here
+      - ./fixtures/:/etc/tls:ro
+    healthcheck:
+      test: ["CMD-SHELL", "service nginx status || exit 1"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+    expose:
+      - "4010"
+      - "4011"
+  proxy:
+    depends_on: *depends_on
+    build:
+      context: .
+      dockerfile: ./squid/Dockerfile
+    environment:
+      - TZ=UTC
+    volumes:
+      - ./squid/conf/squid.conf:/etc/squid/squid.conf
+      - ./fixtures/:/fixtures/
+    healthcheck:
+      test: ["CMD-SHELL", "service squid status || exit 1"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+    expose:
+      - "3128"
+      - "3129"
+    ulimits:
+      nofile:
+        soft: "65536"
+        hard: "65536"
   systemd_test:
     depends_on: *depends_on
     build:
@@ -69,8 +88,7 @@ services:
     volumes:
       - ./config:/root/.config/nodex/
       - agent_socket:/root/.nodex/
-
-  e2e_agent:
+  e2e_agent: &agent
     depends_on: *depends_on
     image: ubuntu:20.04
     platform: linux/amd64
@@ -79,57 +97,56 @@ services:
       - agent_socket:/root/.nodex/
       - ./nodex-agent:/tmp/nodex-agent
     command: /tmp/nodex-agent
-    environment: *environment
+    environment:
+      NODEX_DID_HTTP_ENDPOINT: http://sidetree_prism:4010
+      NODEX_DID_ATTACHMENT_LINK: http://sidetree_prism:4010
+      NODEX_STUDIO_HTTP_ENDPOINT: http://studio_prism:4010
+      RUST_BACKTRACE: 1
     profiles:
       - e2e
-
-  e2e_runner: *runner
-
+  e2e_runner: &runner
+    depends_on: *depends_on
+    image: rust:slim-buster
+    platform: linux/amd64
+    working_dir: /tmp/e2e
+    volumes:
+      - ./config:/root/.config/nodex/
+      - agent_socket:/root/.nodex/
+      - ../:/tmp
+    profiles:
+      - e2e
   e2e_agent_proxy:
-    depends_on:
-      <<: *depends_on
-      proxy:
-        condition: service_started
+    !!merge <<: *agent
+    depends_on: *depends_on_proxy
     build:
-      context: ./squid
+      context: .
+      dockerfile: ./agent/Dockerfile.ubuntu2004
     platform: linux/amd64
     volumes:
       - ./config:/root/.config/nodex/
       - agent_socket_proxy:/root/.nodex/
       - ./nodex-agent:/tmp/nodex-agent
     command: /tmp/nodex-agent
-    environment: *environment-proxy
+    # command: "curl https://nginx:4010/api/v1/identifiers/did:nodex:test:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    environment:
+      NODEX_DID_HTTP_ENDPOINT: https://nginx:4010
+      NODEX_DID_ATTACHMENT_LINK: https://nginx:4010
+      NODEX_STUDIO_HTTP_ENDPOINT: https://nginx:4011
+      HTTP_PROXY: http://proxy:3128
+      HTTPS_PROXY: https://proxy:3129
+      RUST_BACKTRACE: 1
     profiles:
       - e2e
-
   e2e_runner_proxy:
-    <<: *runner
+    !!merge <<: *runner
+    depends_on: *depends_on_proxy
     volumes:
       - ./config:/root/.config/nodex/
       - agent_socket_proxy:/root/.nodex/
       - ../:/tmp
-
-  proxy:
-    image: ubuntu/squid:5.7-23.04_beta
-    environment:
-      - TZ=UTC
-    volumes:
-      - ./squid/conf/squid.conf:/etc/squid/squid.conf
-      - ./squid/fixtures/:/fixtures/
-    ports:
-      - "3128:3128"
-      - "3129:3129"
-    ulimits:
-      nofile:
-        soft: "65536"
-        hard: "65536"
-    profiles:
-      - e2e
-
 networks:
   default:
     name: nodex-network
-
 volumes:
   agent_socket:
   agent_socket_proxy:

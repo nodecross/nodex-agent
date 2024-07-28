@@ -1,3 +1,5 @@
 services:
   e2e_agent:
     image: debian:bookworm
+  e2e_agent_proxy:
+    build.dockerfile: ./agent/Dockerfile.debian_bookworm

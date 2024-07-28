@@ -14,7 +14,6 @@ paths:
       responses:
         "200":
           description: Expected response to a valid request
-
   /v1/device:
     post:
       summary: Register a new device
@@ -39,7 +38,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   /v1/device-info:
     post:
       summary: Send device info
@@ -64,7 +62,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   /v1/message/list:
     post:
       summary: List messages
@@ -89,7 +86,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   /v1/message-activity:
     post:
       summary: Send message activity
@@ -137,7 +133,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   /v1/metric:
     post:
       summary: Send metrics
@@ -162,7 +157,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
+  /v1/metrics:
+    post:
+      summary: Send metrics
+      operationId: sendMetics
+      tags:
+        - metric
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Metric"
+      responses:
+        "200":
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmptyResponse"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 components:
   schemas:
     RegisterDeviceRequest:
@@ -175,16 +193,13 @@ components:
           type: string
         project_did:
           type: string
-
     DeviceInfoRequest:
       type: object
       properties:
         did:
           type: string
-
     EmptyResponse:
       type: object
-
     DidCommMessage:
       type: object
       properties:
@@ -199,7 +214,6 @@ components:
           items:
             $ref: "#/components/schemas/Recipient"
           example: []
-
     Metric:
       type: object
       properties:
@@ -213,7 +227,6 @@ components:
         timestamp:
           type: string
           format: date-time
-  
     Recipient:
       type: object
       properties:
@@ -221,7 +234,6 @@ components:
           type: string
         header:
           $ref: "#/components/schemas/RecipientHeader"
-
     RecipientHeader:
       type: object
       properties:
@@ -239,7 +251,6 @@ components:
           type: string
         tag:
           type: string
-
     Epk:
       type: object
       properties:
@@ -249,13 +260,11 @@ components:
           type: string
         x:
           type: string
-
     MessageListResponse:
       type: array
       items:
         $ref: "#/components/schemas/MessageResponse"
       example: []
-
     MessageResponse:
       type: object
       properties:
@@ -263,7 +272,6 @@ components:
           type: string
         raw_message:
           type: string
-
     Error:
       type: object
       required:

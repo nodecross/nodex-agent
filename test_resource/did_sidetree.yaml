@@ -14,7 +14,6 @@ paths:
       responses:
         "200":
           description: Expected response to a valid request
-
   /api/v1/identifiers/{did}:
     get:
       summary: Find a did
@@ -41,7 +40,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
   /api/v1/operations:
     post:
       summary: Create a new did
@@ -66,7 +64,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-
 components:
   schemas:
     DidResolutionResponse:
@@ -83,7 +80,6 @@ components:
           $ref: "#/components/schemas/DidDocument"
         methodMetadata:
           $ref: "#/components/schemas/methodMetadata"
-
     DidDocument:
       type: object
       required:
@@ -101,7 +97,6 @@ components:
           items:
             type: string
           example: ["#signingKey"]
-
     PublicKey:
       type: object
       required:
@@ -121,7 +116,6 @@ components:
           example: "EcdsaSecp256k1VerificationKey2019"
         publicKeyJwk:
           $ref: "#/components/schemas/PublicKeyJwk"
-
     PublicKeyJwk:
       type: object
       required:
@@ -142,7 +136,6 @@ components:
         y:
           type: string
           example: "v7c-2yGrLaRNXXgO6n39QYUpTcfYdj97eCiX6lwjXEQ"
-
     methodMetadata:
       type: object
       properties:
@@ -152,7 +145,6 @@ components:
           type: string
         updateCommitment:
           type: string
-
     DidCreateRequest:
       type: object
       required:
@@ -166,7 +158,6 @@ components:
           type: string
         suffix_data:
           type: string
-
     Error:
       type: object
       required:

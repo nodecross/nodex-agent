@@ -1,3 +1,5 @@
 services:
   e2e_agent:
     image: ubuntu:20.04
+  e2e_agent_proxy:
+    build.dockerfile: ./agent/Dockerfile.ubuntu2004

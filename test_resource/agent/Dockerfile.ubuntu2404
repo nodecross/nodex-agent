@@ -1,10 +1,9 @@
-FROM ubuntu/squid:5.7-23.04_beta
+FROM ubuntu:24.04
 
 RUN apt-get update \
     && apt-get install -y ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-COPY ./fixtures/nginx-cert.crt /usr/local/share/ca-certificates/
+COPY ./fixtures/client-cert.crt /usr/local/share/ca-certificates/
 
 RUN update-ca-certificates

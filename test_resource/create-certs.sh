@@ -36,10 +36,14 @@
 # openssl genrsa -aes256 -out localhost-cert.key 4096
 # openssl genrsa -aes256 -out client-cert.key 4096
 
-openssl genrsa -out root-CA.key 4096
-openssl genrsa -out localhost-cert.key 4096
-openssl genrsa -out client-cert.key 4096
+pushd $(dirname "$0")
+mkdir -p fixtures
+pushd fixtures
 
+openssl genrsa -out root-CA.key 4096
+openssl genrsa -out proxy-cert.key 4096
+openssl genrsa -out nginx-cert.key 4096
+openssl genrsa -out client-cert.key 4096
 
 # create the certificate for the root Certificate Authority
 openssl req -x509 -new -nodes \
@@ -50,21 +54,34 @@ openssl req -x509 -new -nodes \
    -key root-CA.key \
    -out root-CA.crt
 
-# Create the certificate for the server on localhost. Note that rustls is finicky, requiring the
-# subjectAltName field to be present.
+# Note that rustls is finicky, requiring the subjectAltName field to be present.
 openssl req -new -sha512 \
-   -subj "/C=FR/L=Toulouse/O=Test/CN=localhost" \
-   -addext 'subjectAltName=DNS:localhost' \
+   -subj "/C=FR/L=Toulouse/O=Test/CN=nginx" \
+   -addext 'subjectAltName=DNS:nginx' \
    -addext 'basicConstraints=critical,CA:FALSE' \
    -addext 'extendedKeyUsage=serverAuth' \
-   -key localhost-cert.key \
-   -out localhost-cert.csr
+   -key nginx-cert.key \
+   -out nginx-cert.csr
 openssl x509 -req \
    -CAcreateserial -days 1000 -sha512 -copy_extensions copy \
-   -in localhost-cert.csr \
+   -in nginx-cert.csr \
    -CA root-CA.crt \
    -CAkey root-CA.key \
-   -out localhost-cert.crt
+   -out nginx-cert.crt
+
+openssl req -new -sha512 \
+   -subj "/C=FR/L=Toulouse/O=Test/CN=proxy" \
+   -addext 'subjectAltName=DNS:proxy' \
+   -addext 'basicConstraints=critical,CA:FALSE' \
+   -addext 'extendedKeyUsage=serverAuth' \
+   -key proxy-cert.key \
+   -out proxy-cert.csr
+openssl x509 -req \
+   -CAcreateserial -days 1000 -sha512 -copy_extensions copy \
+   -in proxy-cert.csr \
+   -CA root-CA.crt \
+   -CAkey root-CA.key \
+   -out proxy-cert.crt
 
 # create the certificate for the client
 openssl req -new -sha512 -nodes \
@@ -80,12 +97,8 @@ openssl x509 -req \
    -in client-cert.csr \
    -out client-cert.crt
 # The client_id is a PEM encoded private key and at least one PEM encoded certificate.
-cat client-cert.key client-cert.crt > client-id.pem
-
+# cat client-cert.key client-cert.crt > client-id.pem
 
 # For this test setup, we don't need to keep the key for the root CA nor the signing requests.
 # Keep all the certificates and keys in the fixtures/ directory.
-rm root-CA.key localhost-cert.csr client-cert.csr
-mv root-CA.crt localhost-cert.key localhost-cert.crt client-cert.key client-cert.crt fixtures
-mv client-id.pem fixtures
-mv root-CA.srl fixtures
+rm nginx-cert.csr client-cert.csr proxy-cert.csr
