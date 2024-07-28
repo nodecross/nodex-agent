@@ -2,4 +2,5 @@ services:
   e2e_agent:
     image: ubuntu:24.04
   e2e_agent_proxy:
-    build.dockerfile: ./agent/Dockerfile.ubuntu2404
+    build:
+      dockerfile: ./agent/Dockerfile.ubuntu2404
