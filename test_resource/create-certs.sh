@@ -43,7 +43,7 @@ pushd fixtures
 openssl genrsa -out root-CA.key 4096
 openssl genrsa -out proxy-cert.key 4096
 openssl genrsa -out nginx-cert.key 4096
-openssl genrsa -out client-cert.key 4096
+# openssl genrsa -out client-cert.key 4096
 
 # create the certificate for the root Certificate Authority
 openssl req -x509 -new -nodes \
@@ -57,7 +57,7 @@ openssl req -x509 -new -nodes \
 # Note that rustls is finicky, requiring the subjectAltName field to be present.
 openssl req -new -sha512 \
    -subj "/C=FR/L=Toulouse/O=Test/CN=nginx" \
-   -addext 'subjectAltName=DNS:nginx' \
+   -addext 'subjectAltName=DNS:nginx,DNS:localhost' \
    -addext 'basicConstraints=critical,CA:FALSE' \
    -addext 'extendedKeyUsage=serverAuth' \
    -key nginx-cert.key \
@@ -71,7 +71,7 @@ openssl x509 -req \
 
 openssl req -new -sha512 \
    -subj "/C=FR/L=Toulouse/O=Test/CN=proxy" \
-   -addext 'subjectAltName=DNS:proxy' \
+   -addext 'subjectAltName=DNS:proxy,DNS:localhost' \
    -addext 'basicConstraints=critical,CA:FALSE' \
    -addext 'extendedKeyUsage=serverAuth' \
    -key proxy-cert.key \
@@ -84,21 +84,21 @@ openssl x509 -req \
    -out proxy-cert.crt
 
 # create the certificate for the client
-openssl req -new -sha512 -nodes \
-   -subj "/C=FR/L=Toulouse/O=Test/CN=local-test-client" \
-   -addext "basicConstraints=critical,CA:false" \
-   -addext "extendedKeyUsage=clientAuth" \
-   -key client-cert.key \
-   -out client-cert.csr
-openssl x509 -req \
-   -CAcreateserial -days 1000 -sha512 -copy_extensions copy \
-   -CA root-CA.crt \
-   -CAkey root-CA.key \
-   -in client-cert.csr \
-   -out client-cert.crt
+# openssl req -new -sha512 -nodes \
+#    -subj "/C=FR/L=Toulouse/O=Test/CN=local-test-client" \
+#    -addext "basicConstraints=critical,CA:false" \
+#    -addext "extendedKeyUsage=clientAuth" \
+#    -key client-cert.key \
+#    -out client-cert.csr
+# openssl x509 -req \
+#    -CAcreateserial -days 1000 -sha512 -copy_extensions copy \
+#    -CA root-CA.crt \
+#    -CAkey root-CA.key \
+#    -in client-cert.csr \
+#    -out client-cert.crt
 # The client_id is a PEM encoded private key and at least one PEM encoded certificate.
 # cat client-cert.key client-cert.crt > client-id.pem
 
 # For this test setup, we don't need to keep the key for the root CA nor the signing requests.
 # Keep all the certificates and keys in the fixtures/ directory.
-rm nginx-cert.csr client-cert.csr proxy-cert.csr
+rm nginx-cert.csr proxy-cert.csr
