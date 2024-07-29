@@ -20,7 +20,7 @@ runs:
 
     - name: (run) run mock server
       shell: bash
-      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e up -d
+      run: docker compose -f test_resource/compose.yaml -f test_resource/overrides/${{ inputs.docker-image }}.yaml --profile e2e up -d --build
 
     - name: (run) e2e tests
       shell: bash
