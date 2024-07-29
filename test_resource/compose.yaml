@@ -105,7 +105,10 @@ services:
     profiles:
       - e2e
   e2e_runner: &runner
-    depends_on: *depends_on
+    depends_on:
+      !!merge <<: *depends_on
+      e2e_agent:
+        condition: service_started
     image: rust:slim-buster
     platform: linux/amd64
     working_dir: /tmp/e2e
@@ -139,7 +142,10 @@ services:
       - e2e
   e2e_runner_proxy:
     !!merge <<: *runner
-    depends_on: *depends_on_proxy
+    depends_on:
+      !!merge <<: *depends_on_proxy
+      e2e_agent_proxy:
+        condition: service_started
     volumes:
       - ./config:/root/.config/nodex/
       - agent_socket_proxy:/root/.nodex/
