@@ -8,8 +8,8 @@ use tokio::sync::Mutex as TokioMutex;
 use tokio::sync::Notify;
 
 pub struct MetricUsecase {
-    store_repository: Box<dyn MetricStoreRepository + Send + Sync + 'static>,
-    watch_repository: Box<dyn MetricsWatchRepository + Send + Sync + 'static>,
+    store_repository: Box<dyn MetricStoreRepository>,
+    watch_repository: Box<dyn MetricsWatchRepository>,
     config: Box<SingletonAppConfig>,
     cache_repository: Arc<TokioMutex<MetricsInMemoryCacheService>>,
     shutdown_notify: Arc<Notify>,
@@ -17,8 +17,8 @@ pub struct MetricUsecase {
 
 impl MetricUsecase {
     pub fn new(
-        store_repository: Box<dyn MetricStoreRepository + Send + Sync>,
-        watch_repository: Box<dyn MetricsWatchRepository + Send + Sync>,
+        store_repository: Box<dyn MetricStoreRepository>,
+        watch_repository: Box<dyn MetricsWatchRepository>,
         config: Box<SingletonAppConfig>,
         cache_repository: Arc<TokioMutex<MetricsInMemoryCacheService>>,
         shutdown_notify: Arc<Notify>,

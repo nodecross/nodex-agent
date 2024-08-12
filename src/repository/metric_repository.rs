@@ -14,7 +14,7 @@ pub struct MetricsWithTimestamp {
     pub metrics: Vec<Metric>,
 }
 
-pub trait MetricsWatchRepository {
+pub trait MetricsWatchRepository: Send + Sync + 'static {
     fn watch_metrics(&mut self) -> Vec<Metric>;
 }
 
@@ -26,7 +26,7 @@ pub trait MetricsCacheRepository {
 }
 
 #[async_trait::async_trait]
-pub trait MetricStoreRepository {
+pub trait MetricStoreRepository: Send + Sync + 'static {
     async fn save(&self, request: Vec<MetricsWithTimestamp>) -> anyhow::Result<()>;
 }
 
