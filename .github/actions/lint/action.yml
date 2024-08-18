@@ -22,7 +22,7 @@ runs:
 
     - name: (check) install-taplo
       shell: bash
-      run: cargo install taplo-cli
+      run: cargo install --locked taplo-cli
 
     - name: (check) lint-toml
       shell: bash
