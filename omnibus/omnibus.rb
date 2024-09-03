@@ -53,3 +53,11 @@ use_git_caching false
 # ------------------------------
 windows_arch   %w{x86 x64}.include?((ENV['OMNIBUS_WINDOWS_ARCH'] || '').downcase) ?
                  ENV['OMNIBUS_WINDOWS_ARCH'].downcase.to_sym : :x86
+
+if ENV['TARGET_PLATFORM'] == 'mac'
+  # We are distributing only the binary, but the health check is currently set to check links for dylib and bundle files.
+  # Since lld was used to check the binary in deb packages, I believe we should use otool to check the binary on macOS as well.
+  # Therefore, we will disable the health check on macOS.
+  # https://github.com/chef/omnibus/blob/0633d009f24dfced4eb6ab76346b84fbb8c970f0/lib/omnibus/health_check.rb#L298
+  health_check false
+end

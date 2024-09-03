@@ -7,20 +7,32 @@
 INSTALL_DIR=/opt/nodex-agent
 SERVICE_NAME=com.nodex.nodex-agent
 HOME_DIR=/Users/nodex/
+GROUP_NAME=nodex
 
 set -e
 
-# Check if the user and group already exist, if not, create them
+# Check if the group already exists, if not, create it
+if ! dscl . -read /Groups/$GROUP_NAME >/dev/null 2>&1; then
+    echo "Creating dedicated group for nodex-agent..."
+    dscl . -create /Groups/$GROUP_NAME
+    dscl . -create /Groups/$GROUP_NAME RealName "Nodex Agent Group"
+    dscl . -create /Groups/$GROUP_NAME PrimaryGroupID "510"
+else
+    echo "Group $GROUP_NAME already exists."
+fi
+
+# Check if the user already exists, if not, create it
 if ! id -u nodex >/dev/null 2>&1; then
-    echo "Creating dedicated user and group for nodex-agent..."
+    echo "Creating dedicated user for nodex-agent..."
     dscl . -create /Users/nodex
     dscl . -create /Users/nodex UserShell /usr/bin/false
     dscl . -create /Users/nodex RealName "Nodex Agent"
     dscl . -create /Users/nodex UniqueID "510"
-    dscl . -create /Users/nodex PrimaryGroupID 20
+    dscl . -create /Users/nodex PrimaryGroupID "510"
+    dscl . -append /Groups/$GROUP_NAME GroupMembership nodex
     dscl . -create /Users/nodex NFSHomeDirectory $HOME_DIR
     mkdir -p $HOME_DIR
-    chown nodex:staff $HOME_DIR
+    chown nodex:$GROUP_NAME $HOME_DIR
 else
     echo "User nodex already exists."
 fi
@@ -34,10 +46,10 @@ else
 fi
 
 # Set ownership and permissions
-chown -R root:nodex ${INSTALL_DIR}
+chown -R root:$GROUP_NAME ${INSTALL_DIR}
 chmod -R 700 ${INSTALL_DIR}
 mkdir -p ${HOME_DIR}
-chown -R nodex:staff ${HOME_DIR}
+chown -R nodex:$GROUP_NAME ${HOME_DIR}
 chmod -R 700 ${HOME_DIR}
 
 # Create a symlink to the agent's binary, handling existing symlink

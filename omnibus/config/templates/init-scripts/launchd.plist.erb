@@ -13,14 +13,14 @@
         <key>RunAtLoad</key>
         <true/>
 
-        <key>KeepAlive</key>
+         <key>KeepAlive</key>
         <dict>
             <key>SuccessfulExit</key>
             <false/>
-            <key>AfterInitialDemand</key>
+            <key>CrashThreshold</key>
+            <integer>5</integer>
+            <key>RestartInterval</key>
             <integer>10</integer>
-            <key>StartInterval</key>
-            <integer>300</integer>
         </dict>
 
         <key>UserName</key>
@@ -48,31 +48,19 @@
     
         <key>HardResourceLimits</key>
         <dict>
-            <key>StandardIO</key>
-            <string>none</string>
             <key>Core</key>
             <integer>0</integer>
         </dict>
 
         <key>WorkingDirectory</key>
-        <string>%h</string>
+        <string>/Users/nodex</string>
         <key>RootDirectory</key>
-        <string>/</string>
-    
+        <string>/Users/nodex</string>
+
         <key>MachServices</key>
         <dict>
-            <key>%h/.config</key>
-            <true/>
-            <key>%h/.nodex</key>
+            <key>com.example.my-service</key>
             <true/>
         </dict>
-        
-        <key>Program</key>
-        <string><%= install_dir %>/bin/nodex-agent</string>
-        <key>ProgramDirectory</key>
-        <string><%= install_dir %>/bin</string>
-        <key>StandardIOPath</key>
-        <string>/dev/null</string>
-        
     </dict>
 </plist>
