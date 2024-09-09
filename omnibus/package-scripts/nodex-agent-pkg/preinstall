@@ -1,0 +1,18 @@
+#!/bin/sh
+#
+# Perform necessary nodex-agent setup steps
+# before package is installed.
+#
+
+set -e
+
+INSTALL_DIR=/opt/nodex-agent
+
+if [ -d "$INSTALL_DIR" ]; then
+    echo "Backing up existing installation directory..."
+    cp -r "$INSTALL_DIR" "$INSTALL_DIR.backup"
+fi
+
+echo "You're about to install nodex-agent!"
+
+exit 0

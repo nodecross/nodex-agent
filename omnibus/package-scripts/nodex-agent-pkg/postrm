@@ -1,0 +1,76 @@
+#!/bin/sh
+# Perform necessary cleanup steps after nodex-agent package is removed, purged, upgraded, or deconfigured.
+
+INSTALL_DIR=/opt/nodex-agent
+SERVICE_NAME=com.nodex.nodex-agent
+HOME_DIR=/Users/nodex/
+
+set -e
+
+case "$1" in
+    remove)
+        echo "Stopping and unloading service $SERVICE_NAME..."
+        if launchctl list | grep -q "$SERVICE_NAME"; then
+            if ! launchctl unload /Library/LaunchDaemons/$SERVICE_NAME.plist; then
+                echo "Failed to unload service $SERVICE_NAME"
+            fi
+        fi
+
+        if [ -d "$INSTALL_DIR" ]; then
+            echo "Removing installation directory $INSTALL_DIR..."
+            if ! rm -rf "$INSTALL_DIR"; then
+                echo "Failed to remove installation directory"
+            fi
+        fi
+        ;;
+
+    purge)
+        echo "Purging configuration and removing directories..."
+
+        # Stop and unload the service, if it still exists
+        if launchctl list | grep -q "$SERVICE_NAME"; then
+            if ! launchctl unload /Library/LaunchDaemons/$SERVICE_NAME.plist; then
+                echo "Failed to unload service $SERVICE_NAME"
+            fi
+        fi
+
+        # Remove the service file
+        if [ -f "/Library/LaunchDaemons/$SERVICE_NAME.plist" ]; then
+            echo "Removing service file $SERVICE_NAME.plist..."
+            if ! rm /Library/LaunchDaemons/$SERVICE_NAME.plist; then
+                echo "Failed to remove service file"
+            fi
+        fi
+
+        # Remove user and group
+        if id -u nodex >/dev/null 2>&1; then
+            echo "Removing nodex user and group..."
+            dscl . -delete /Users/nodex
+            dscl . -delete /Groups/nodex
+        fi
+
+        # Remove the installation directory
+        if [ -d "$INSTALL_DIR" ]; then
+            echo "Removing installation directory $INSTALL_DIR..."
+            if ! rm -rf "$INSTALL_DIR"; then
+                echo "Failed to remove installation directory"
+            fi
+        fi
+
+        # Remove configuration files
+        if [ -d "$HOME_DIR" ]; then
+            echo "Removing configuration directory $HOME_DIR..."
+            chmod -R 755 "$HOME_DIR"
+            if ! rm -rf "$HOME_DIR"; then
+                echo "Failed to remove configuration directory"
+            fi
+        fi
+        ;;
+
+    *)
+        echo "Unknown option: $1"
+        ;;
+esac
+
+echo "$SERVICE_NAME post-removal script completed."
+exit 0

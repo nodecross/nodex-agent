@@ -10,7 +10,7 @@ This will be investigated in the future.
 Navigate to the root of the project directory and run the following command to build the Docker image:
 
 ```
-docker build -t omnibus-ubuntu -f omnibus/images/ubuntu/Dockerfile .
+docker build -t omnibus-ubuntu -f omnibus/debug/ubuntu/Dockerfile .
 ```
 
 This command will build the Docker image using the Dockerfile located at omnibus/images/ubuntu/Dockerfile. The resulting image will be tagged as omnibus-ubuntu.

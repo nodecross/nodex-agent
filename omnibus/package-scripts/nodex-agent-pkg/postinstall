@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Perform necessary nodex-agent setup steps
+# after package is installed.
+#
+
+INSTALL_DIR=/opt/nodex-agent
+CONF_DIR=$INSTALL_DIR/etc
+SERVICE_NAME=com.nodex.nodex-agent
+HOME_DIR=/Users/nodex/
+GROUP_NAME=nodex
+
+set -e
+
+# Check if the group already exists, if not, create it
+if ! dscl . -read /Groups/$GROUP_NAME >/dev/null 2>&1; then
+    echo "Creating dedicated group for nodex-agent..."
+    dscl . -create /Groups/$GROUP_NAME
+    dscl . -create /Groups/$GROUP_NAME RealName "Nodex Agent Group"
+    dscl . -create /Groups/$GROUP_NAME PrimaryGroupID "510"
+else
+    echo "Group $GROUP_NAME already exists."
+fi
+
+# Check if the user already exists, if not, create it
+if ! id -u nodex >/dev/null 2>&1; then
+    echo "Creating dedicated user for nodex-agent..."
+    dscl . -create /Users/nodex
+    dscl . -create /Users/nodex UserShell /usr/bin/false
+    dscl . -create /Users/nodex RealName "Nodex Agent"
+    dscl . -create /Users/nodex UniqueID "510"
+    dscl . -create /Users/nodex PrimaryGroupID "510"
+    dscl . -append /Groups/$GROUP_NAME GroupMembership nodex
+    dscl . -create /Users/nodex NFSHomeDirectory $HOME_DIR
+    mkdir -p $HOME_DIR
+    chown nodex:$GROUP_NAME $HOME_DIR
+else
+    echo "User nodex already exists."
+fi
+
+# Ensure the installation directory exists before setting ownership and permissions
+if [ ! -d "${INSTALL_DIR}" ]; then
+    echo "Creating installation directory ${INSTALL_DIR}..."
+    mkdir -p ${INSTALL_DIR}
+else
+    echo "Installation directory ${INSTALL_DIR} already exists."
+fi
+
+# Set ownership and permissions
+chown -R root:$GROUP_NAME ${INSTALL_DIR}
+chmod -R 750 ${INSTALL_DIR}
+mkdir -p ${HOME_DIR}
+chown -R nodex:$GROUP_NAME ${HOME_DIR}
+chmod -R 740 ${HOME_DIR}
+
+# Create a symlink to the agent's binary, handling existing symlink
+if [ -L /usr/local/bin/nodex-agent ]; then
+    echo "Updating existing symlink for nodex-agent..."
+    ln -sf $INSTALL_DIR/bin/nodex-agent /usr/local/bin/nodex-agent
+elif [ -e /usr/local/bin/nodex-agent ]; then
+    echo "A file already exists at /usr/local/bin/nodex-agent. Removing it to create a symlink..."
+    rm /usr/local/bin/nodex-agent
+    ln -sf $INSTALL_DIR/bin/nodex-agent /usr/local/bin/nodex-agent
+else
+    echo "Creating a new symlink for nodex-agent..."
+    ln -sf $INSTALL_DIR/bin/nodex-agent /usr/local/bin/nodex-agent
+fi
+
+# Load the launchd service
+cp -vf "$CONF_DIR/com.nodex.nodex-agent.plist" "/Library/LaunchDaemons/$SERVICE_NAME.plist"
+if [ -f "/Library/LaunchDaemons/$SERVICE_NAME.plist" ]; then
+    echo "Reloading the $SERVICE_NAME service..."
+    if launchctl list | grep -q "$SERVICE_NAME"; then
+        echo "Unloading existing $SERVICE_NAME service..."
+        sudo launchctl unload /Library/LaunchDaemons/$SERVICE_NAME.plist
+    fi
+    sudo launchctl load /Library/LaunchDaemons/$SERVICE_NAME.plist
+    sudo launchctl enable system/$SERVICE_NAME
+    echo "$SERVICE_NAME service loaded and enabled."
+else
+    echo "[ WARNING ]\tThe launchd service file was not found. Please ensure it is installed correctly."
+fi
+
+# Start the service if the configuration file exists
+if [ -f "$HOME_DIR/.config/nodex/config.json" ]; then
+    echo "(Re)starting $SERVICE_NAME now..."
+    launchctl kickstart -k system/$SERVICE_NAME || true
+fi
+
+echo "$SERVICE_NAME has been installed"
+echo "Thank you for installing nodex-agent!"
+
+exit 0

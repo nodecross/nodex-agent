@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>com.nodex.nodex-agent</string>
+        
+        <key>ProgramArguments</key>
+        <array>
+            <string><%= install_dir %>/bin/nodex-agent</string>
+        </array>
+        
+        <key>RunAtLoad</key>
+        <false/>
+
+         <key>KeepAlive</key>
+        <dict>
+            <key>SuccessfulExit</key>
+            <false/>
+            <key>CrashThreshold</key>
+            <integer>5</integer>
+            <key>RestartInterval</key>
+            <integer>10</integer>
+        </dict>
+
+        <key>UserName</key>
+        <string>nodex</string>
+        <key>GroupName</key>
+        <string>nodex</string>
+        
+        <key>EnvironmentVariables</key>
+        <dict>
+            <key>PATH</key>
+            <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        </dict>
+        
+        <key>StandardOutPath</key>
+        <string>/var/log/nodex-agent.log</string>
+        <key>StandardErrorPath</key>
+        <string>/var/log/nodex-agent.err</string>
+        
+        <key>SessionCreate</key>
+        <true/>
+        <key>EnableTransactions</key>
+        <true/>
+        <key>LaunchOnlyOnce</key>
+        <true/>
+    
+        <key>HardResourceLimits</key>
+        <dict>
+            <key>Core</key>
+            <integer>0</integer>
+        </dict>
+
+        <key>WorkingDirectory</key>
+        <string>/Users/nodex</string>
+        <key>RootDirectory</key>
+        <string>/Users/nodex</string>
+
+        <key>MachServices</key>
+        <dict>
+            <key>com.nodex.nodex-agent</key>
+            <true/>
+        </dict>
+    </dict>
+</plist>
