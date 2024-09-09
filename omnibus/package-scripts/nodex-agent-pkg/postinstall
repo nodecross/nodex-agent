@@ -5,6 +5,7 @@
 #
 
 INSTALL_DIR=/opt/nodex-agent
+CONF_DIR=$INSTALL_DIR/etc
 SERVICE_NAME=com.nodex.nodex-agent
 HOME_DIR=/Users/nodex/
 GROUP_NAME=nodex
@@ -47,10 +48,10 @@ fi
 
 # Set ownership and permissions
 chown -R root:$GROUP_NAME ${INSTALL_DIR}
-chmod -R 700 ${INSTALL_DIR}
+chmod -R 750 ${INSTALL_DIR}
 mkdir -p ${HOME_DIR}
 chown -R nodex:$GROUP_NAME ${HOME_DIR}
-chmod -R 700 ${HOME_DIR}
+chmod -R 740 ${HOME_DIR}
 
 # Create a symlink to the agent's binary, handling existing symlink
 if [ -L /usr/local/bin/nodex-agent ]; then
@@ -66,10 +67,16 @@ else
 fi
 
 # Load the launchd service
+cp -vf "$CONF_DIR/com.nodex.nodex-agent.plist" "/Library/LaunchDaemons/$SERVICE_NAME.plist"
 if [ -f "/Library/LaunchDaemons/$SERVICE_NAME.plist" ]; then
-    echo "Loading the $SERVICE_NAME service..."
-    launchctl load /Library/LaunchDaemons/$SERVICE_NAME.plist
-    launchctl enable system/$SERVICE_NAME
+    echo "Reloading the $SERVICE_NAME service..."
+    if launchctl list | grep -q "$SERVICE_NAME"; then
+        echo "Unloading existing $SERVICE_NAME service..."
+        sudo launchctl unload /Library/LaunchDaemons/$SERVICE_NAME.plist
+    fi
+    sudo launchctl load /Library/LaunchDaemons/$SERVICE_NAME.plist
+    sudo launchctl enable system/$SERVICE_NAME
+    echo "$SERVICE_NAME service loaded and enabled."
 else
     echo "[ WARNING ]\tThe launchd service file was not found. Please ensure it is installed correctly."
 fi

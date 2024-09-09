@@ -23,11 +23,9 @@ exclude "**/.git"
 exclude "**/bundler/git"
 
 # handle distribution by environment variable
-if ENV['TARGET_PLATFORM'] == 'ubuntu'
+if ENV["TARGET_PLATFORM"] == "ubuntu"
   package_scripts_path "#{Omnibus::Config.project_root}/package-scripts/nodex-agent-deb"
-end
-
-if ENV['TARGET_PLATFORM'] == 'mac'
+elsif ENV["TARGET_PLATFORM"] == "mac"
   package_scripts_path "#{Omnibus::Config.project_root}/package-scripts/nodex-agent-pkg"
 end
 
@@ -35,8 +33,10 @@ package :deb do
   compression_level 5
   compression_type :xz
 end
-
+package :pkg do
+  identifier 'com.nodex.nodex-agent'
+end
 compress :dmg do
-  window_bounds '200, 200, 750, 600'
-  pkg_position '10, 10'
+  window_bounds "200, 200, 750, 600"
+  pkg_position "10, 10"
 end

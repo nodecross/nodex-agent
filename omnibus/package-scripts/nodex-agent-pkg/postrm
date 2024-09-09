@@ -60,6 +60,7 @@ case "$1" in
         # Remove configuration files
         if [ -d "$HOME_DIR" ]; then
             echo "Removing configuration directory $HOME_DIR..."
+            chmod -R 755 "$HOME_DIR"
             if ! rm -rf "$HOME_DIR"; then
                 echo "Failed to remove configuration directory"
             fi

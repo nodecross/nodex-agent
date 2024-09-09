@@ -20,8 +20,8 @@ dpkg -i /path/to/<downloaded_filename>.deb
 Run the following commands to set the configuration. Note that these commands must be executed as the nodex user.
 
 ```
-sudo -u nodex /usr/bin/nodex-agent --config network set --key project_did --value <your project_did>
-sudo -u nodex /usr/bin/nodex-agent --config network set --key secret_key --value <your secret_key>
+sudo -H -u nodex /usr/bin/nodex-agent --config network set --key project_did --value <your project_did>
+sudo -H -u nodex /usr/bin/nodex-agent --config network set --key secret_key --value <your secret_key>
 ```
 
 Replace <your project_did> and <your secret_key> with the actual values specific to your project.
