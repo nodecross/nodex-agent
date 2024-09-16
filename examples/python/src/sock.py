@@ -8,11 +8,11 @@ import urllib.parse
 session = requests_unixsocket.Session()
 
 default_path = os.path.join(os.path.expanduser("~"), ".nodex/run/nodex.sock")
-path_by_deb = "/home/nodex/.nodex/run/nodex.sock"
-target_path = path_by_deb if os.path.exists(path_by_deb) else default_path
+path_by_installed_deb = "/home/nodex/.nodex/run/nodex.sock"
+target_sock_path = path_by_installed_deb if os.path.exists(path_by_installed_deb) else default_path
 
 # Construct the base URL using the Unix socket path
-base = f'http+unix://{urllib.parse.quote(target_path, safe="")}'
+base = f'http+unix://{urllib.parse.quote(target_sock_path, safe="")}'
 
 
 def call(method, path, payload):
