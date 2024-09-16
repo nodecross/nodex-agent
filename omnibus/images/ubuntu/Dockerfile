@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM --platform=linux/amd64 ubuntu:22.04
 
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
@@ -19,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     sudo \
     podman \
     dmidecode \
+    python3 \
+    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 RUN gem install bundler
 
