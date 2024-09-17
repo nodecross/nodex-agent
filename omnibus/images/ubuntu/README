@@ -1,5 +1,7 @@
 # How to Build and Run the Omnibus Ubuntu Environment
 This guide explains how to build the Docker image and run a Bash session within the container.
+When supporting build with cross, build with omnibus is not possible with the following image except in debian environment,
+This will be investigated in the future.
 
 ## Prerequisites
 - Docker installed on your system.

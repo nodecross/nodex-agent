@@ -11,7 +11,7 @@ license-file = "LICENSE"
 name = "nodex"
 readme = "README.md"
 repository = "https://github.com/nodecross/nodex"
-version = "3.0.0"
+version = "3.1.1"
 
 [workspace]
 members = ["e2e"]
@@ -63,7 +63,7 @@ uuid = { version = "1.10.0", features = [
     "serde",
     "v4",
 ] }
-zip = "2.1.5"
+zip = "2.2.0"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.56.0", features = [

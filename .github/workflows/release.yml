@@ -42,6 +42,8 @@ jobs:
   build-linux:
     needs: check-user
     runs-on: ubuntu-latest
+    outputs:
+      upload_deb_name: ${{ steps.output_deb.outputs.upload_deb_name }}
     strategy:
       matrix:
         target: [x86_64-unknown-linux-gnu]
@@ -54,9 +56,39 @@ jobs:
         uses: ./.github/actions/build-with-cross
         with:
           target: ${{ matrix.target }}
-          use-cache: false
+          use-cache: true
           binary-file-name: nodex-agent
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install `cargo-get`
+        run: cargo install cargo-get
+        shell: bash
+
+      - name: (run) Output package name for release
+        run: |
+          PACKAGE_NAME="nodex-agent"
+          VERSION=$(cargo get package.version)
+          ARCHITECTURE=$(dpkg --print-architecture)
+          UPLOAD_DEB_NAME="${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
+          echo "UPLOAD_DEB_NAME=$UPLOAD_DEB_NAME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: (run) build with omnibus
+        uses: ./.github/actions/build-with-omnibus
+        with:
+          use-cache: true
+          platform: ubuntu
+          arch: ${{ matrix.target }}
+          release-package-name: ${{ env.UPLOAD_DEB_NAME }}
+          package-format: deb
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: (run) Output deb name for release
+        id: output_deb
+        run: echo "upload_deb_name=${{ env.UPLOAD_DEB_NAME }}" >> $GITHUB_OUTPUT
 
   build-windows:
     needs: check-user
@@ -135,6 +167,15 @@ jobs:
           asset_path: ${{ github.workspace }}/nodex-agent-x86_64-unknown-linux-gnu.zip
           asset_name: nodex-agent-x86_64.zip
           asset_content_type: application/zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload asset (deb)
+        uses: ./.github/actions/upload-release-asset
+        with:
+          release_id: ${{ steps.release.outputs.result }}
+          asset_path: ${{ github.workspace }}/${{ needs.build-linux.outputs.upload_deb_name }}
+          asset_name: ${{ needs.build-linux.outputs.upload_deb_name }}
+          asset_content_type: application/vnd.debian.binary-package
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload asset (mac)

@@ -1,0 +1,25 @@
+name: prepare for building with Omnibus
+description: ""
+inputs:
+  platform:
+    required: true
+    description: ""
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies for building with Omnibus on ubuntu
+      run: |
+        sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        sudo apt-get update
+        sudo apt-get install -y fakeroot
+      shell: bash
+      if: ${{ inputs.platform == 'ubuntu' }}
+
+    - name: Set permissions for omnibus using directories on ubuntu
+      run: |
+        sudo mkdir -p /var/cache/omnibus
+        sudo chown $USER:$USER /var/cache/omnibus
+        sudo mkdir -p /lib/systemd/system
+        sudo chown $USER:$USER /lib/systemd/system
+      shell: bash
+      if: ${{ inputs.platform == 'ubuntu' }}

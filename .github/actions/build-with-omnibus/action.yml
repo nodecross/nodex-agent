@@ -1,0 +1,83 @@
+name: build with omnibus
+description: ""
+inputs:
+  platform:
+    required: true
+    description: ""
+  arch:
+    required: true
+    description: ""
+  use-cache:
+    required: true
+    description: ""
+  release-package-name:
+    required: true
+    description: ""
+  package-format:
+    required: true
+    description: ""
+  github-token:
+    required: true
+    description: ""
+  checkout:
+    required: false
+    description: ""
+runs:
+  using: composite
+  steps:
+    - name: (checkout) source code
+      if: ${{ inputs.checkout == 'true' }}
+      uses: actions/checkout@v4
+
+    - name: (cache) rust
+      if: ${{ inputs.use-cache == 'true' }}
+      uses: Swatinem/rust-cache@v2
+
+    - name: (install) install development tools
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-llvm-cov,cross
+
+    - name: (setup) Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.1'
+        bundler-cache: true
+
+    - name: (setup) Install Omnibus
+      run: |
+        cd omnibus
+        gem install bundler -v '2.5.17'
+        bundle install
+      shell: bash
+    
+    - name: (setup) prepare for ubuntu
+      uses: ./.github/actions/build-with-omnibus/prepare
+      with:
+        platform: ${{ inputs.platform }}
+
+    - name: Build package with omnibus
+      run: |
+        cd omnibus
+        bundle exec omnibus build nodex-agent --log-level info
+      env:
+        TARGET_PLATFORM: ${{ inputs.platform }}
+        TARGET_ARCH: ${{ inputs.arch }}
+      shell: bash
+
+    - name: restore for ubuntu
+      uses: ./.github/actions/build-with-omnibus/restore
+      with:
+        platform: ${{ inputs.platform }}
+
+    - name: (run) Rename package
+      run: |
+        PKG_FILE=$(find omnibus/pkg -name "*.${{ inputs.package-format }}" | head -n 1)
+        mv "$PKG_FILE" "omnibus/pkg/${{ inputs.release-package-name }}"
+      shell: bash
+
+    - name: (run) upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.release-package-name }}
+        path: omnibus/pkg/${{ inputs.release-package-name }}

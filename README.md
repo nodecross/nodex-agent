@@ -7,9 +7,6 @@
   <a href="https://github.com/nodecross/nodex/actions/workflows/release.yml">
     <img src="https://github.com/nodecross/nodex/actions/workflows/release.yml/badge.svg?branch=main" alt="Release Pipeline" />
   </a>
-  <a href="https://coveralls.io/github/nodecross/nodex">
-    <img src="https://coveralls.io/repos/github/nodecross/nodex/badge.svg" alt="Coverage Status" />
-  </a>
   <a href="https://github.com/semantic-release/semantic-release">
     <img src="https://img.shields.io/badge/semantic--release-rust-B7410E?logo=semantic-release" alt="Semantic Release" />
   </a>

@@ -1,6 +1,10 @@
-from sock import post
 import time
+from platform_os import is_windows
 
+if is_windows():
+    from request import post
+else:
+    from sock import post
 
 json_response = post(
     "/events",

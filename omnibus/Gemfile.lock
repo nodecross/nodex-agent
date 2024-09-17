@@ -94,7 +94,7 @@ GEM
     plist (3.7.1)
     public_suffix (6.0.1)
     rainbow (3.1.1)
-    rexml (3.3.4)
+    rexml (3.3.6)
       strscan
     ruby-progressbar (1.13.0)
     strscan (3.1.0)

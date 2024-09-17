@@ -1,0 +1,15 @@
+name: restore for building with Omnibus
+description: ""
+inputs:
+  platform:
+    required: true
+    description: ""
+runs:
+  using: composite
+  steps:
+    - name: Restore permissions for omnibus using directories on ubuntu
+      run: |
+        sudo chown $USER:$USER /var/cache/omnibus
+        sudo chown root:root /lib/systemd/system
+      shell: bash
+      if : ${{ inputs.platform == 'ubuntu' }}

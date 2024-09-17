@@ -18,6 +18,8 @@ use services::nodex::NodeX;
 use services::studio::Studio;
 use shadow_rs::shadow;
 use std::env;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{collections::HashMap, fs, sync::Arc};
 use sysinfo::{get_current_pid, System};
@@ -114,10 +116,8 @@ async fn main() -> std::io::Result<()> {
 
     let home_dir = dirs::home_dir().unwrap();
     let config_dir = home_dir.join(".nodex");
-    let runtime_dir = config_dir.clone().join("run");
     let logs_dir = config_dir.clone().join("logs");
 
-    fs::create_dir_all(&runtime_dir).unwrap_log();
     fs::create_dir_all(&logs_dir).unwrap_log();
 
     // NOTE: generate Key Chain
@@ -186,8 +186,15 @@ async fn main() -> std::io::Result<()> {
 
     #[cfg(unix)]
     let server = {
+        let runtime_dir = config_dir.clone().join("run");
+        fs::create_dir_all(&runtime_dir).unwrap_log();
         let sock_path = runtime_dir.clone().join("nodex.sock");
-        server::new_uds_server(&sock_path, transfer_client)
+
+        let uds_server = server::new_uds_server(&sock_path, transfer_client);
+        let permissions = fs::Permissions::from_mode(0o766);
+        fs::set_permissions(&sock_path, permissions)?;
+
+        uds_server
     };
 
     #[cfg(windows)]

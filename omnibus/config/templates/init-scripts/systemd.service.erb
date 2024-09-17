@@ -8,7 +8,7 @@ After=network-online.target
 Type=simple
 
 # Core service execution settings.
-ExecStart=<%= install_dir %>/bin/nodex-agent
+ExecStart=/home/nodex/bin/nodex-agent
 
 # Restart behavior: restarts on failure, with a 10-second delay between attempts.
 # Limits restarts to 5 attempts within a 300-second period to avoid excessive restarts.
@@ -30,12 +30,10 @@ NoNewPrivileges=true
 ProtectSystem=full
 ReadWritePaths=%h/.config
 ReadWritePaths=%h/.nodex
+ReadWritePaths=%h/bin
 ProtectKernelModules=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
-
-# Ensures the binary directory is read-only to prevent tampering.
-ReadOnlyPaths=<%= install_dir %>/bin
 
 [Install]
 # Makes the service start automatically in multi-user mode.
