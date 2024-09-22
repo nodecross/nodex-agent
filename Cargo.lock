@@ -2485,7 +2485,7 @@ dependencies = [
 
 [[package]]
 name = "protocol"
-version = "3.1.1"
+version = "0.2.0"
 dependencies = [
  "actix-rt",
  "chrono",
@@ -3141,9 +3141,9 @@ dependencies = [
 
 [[package]]
 name = "shadow-rs"
-version = "0.29.0"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a600f795d0894cda22235b44eea4b85c2a35b405f65523645ac8e35b306817a"
+checksum = "fca0e9bdc073d7173ba993fb7886477af5df75588b57afcb4b96f21911ab0bfa"
 dependencies = [
  "const_format",
  "git2",
