@@ -3,7 +3,10 @@ use serde::Serialize;
 
 #[derive(Serialize, Clone, Copy)]
 pub enum AgentErrorCode {
+    VersionNoBinaryUrl = 1001,
+    VersionNoPath = 1002,
     NetworkInternal = 5001,
+    VersionInternal = 5002,
 }
 
 #[derive(Serialize)]
