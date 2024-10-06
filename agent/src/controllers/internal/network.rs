@@ -22,7 +22,7 @@ pub async fn handler(
         Err(e) => {
             log::error!("{:?}", e);
             Ok(create_agent_error(
-                AgentErrorCode::NetworkInternalError,
+                AgentErrorCode::NetworkInternal,
                 "Internal Server Error",
             ))
         }

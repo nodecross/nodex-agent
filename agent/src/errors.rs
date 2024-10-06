@@ -3,7 +3,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Clone, Copy)]
 pub enum AgentErrorCode {
-    NetworkInternalError = 5001,
+    NetworkInternal = 5001,
 }
 
 #[derive(Serialize)]
