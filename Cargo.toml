@@ -36,7 +36,7 @@ protocol = { path = "./protocol" }
 rand_core = "0.6.4"
 reqwest = { version = "0.12", features = [
     "json",
-    "rustls-tls-native-roots",
+    "native-tls",
 ], default-features = false }
 rstest = "0.21.0"
 rumqttc = "0.24.0"

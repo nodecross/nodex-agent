@@ -1,6 +1,7 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
+use std::{thread, time::{Duration, Instant}};
 
 use crate::{
     repository::custom_metric_repository::CustomMetricStoreRequest,
@@ -35,7 +36,8 @@ pub async fn handler(
     };
 
     let usecase = CustomMetricUsecase::new();
-    match usecase
+    let now = Instant::now();
+    let ret = match usecase
         .save(CustomMetricStoreRequest {
             key: json.key,
             value: json.value,
@@ -51,5 +53,8 @@ pub async fn handler(
             log::error!("{:?}", e);
             Ok(HttpResponse::InternalServerError().json("internal server error"))
         }
-    }
+    };
+    let duration = now.elapsed();
+    println!("dur: {} us", duration.as_micros());
+    ret
 }
