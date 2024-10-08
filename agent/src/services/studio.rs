@@ -249,20 +249,22 @@ impl Studio {
         let my_keyring = self.did_accessor.get_my_keyring();
         let model =
             VerifiableCredentials::new(my_did, serde_json::to_value(request)?, chrono::Utc::now());
-        let project_did = {
-            let network = crate::network_config();
-            let network = network.lock();
-            network.get_project_did().expect("project_did is not set")
-        };
-        let payload = DidCommEncryptedService::generate(
-            &self.did_repository,
-            model,
-            &my_keyring,
-            &project_did,
-            None,
-        )
-        .await
-        .context("failed to generate payload")?;
+        // let project_did = {
+        //     let network = crate::network_config();
+        //     let network = network.lock();
+        //     network.get_project_did().expect("project_did is not set")
+        // };
+        // let payload = DidCommEncryptedService::generate(
+        //     &self.did_repository,
+        //     model,
+        //     &my_keyring,
+        //     &project_did,
+        //     None,
+        // )
+        // .await
+        // .context("failed to generate payload")?;
+        let payload = DidVcService::generate(&self.did_repository, model, &my_keyring)
+            .context("failed to generate payload")?;
         let payload = serde_json::to_string(&payload).context("failed to serialize")?;
 
         async fn send(

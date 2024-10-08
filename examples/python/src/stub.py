@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from sock import post
 
-experiment = "tls_didcomm"
+experiment = "tls_vc"
 results = {}
 
 def randomname(n):
