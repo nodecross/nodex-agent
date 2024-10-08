@@ -17,9 +17,6 @@ base = f'http+unix://{urllib.parse.quote(sock_path, safe="")}'
 
 def call(method, path, payload):
     url = f"{base}:{path}"
-    print("Now Requesting...")
-    print(f"- Method: {method.upper()}")
-    print(f"- URL: {urllib.parse.unquote(url)}\n")
 
     try:
         if method == "get":

@@ -3,6 +3,7 @@ import numpy as np
 import random, string
 import subprocess
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from sock import post
 
@@ -13,7 +14,7 @@ def randomname(n):
    randlst = [random.choice(string.ascii_letters + string.digits) for i in range(n)]
    return ''.join(randlst)
 
-for s in range(2, 12):
+for s in tqdm(range(2, 20)):
     key = randomname(2 ** s)
     proc = subprocess.Popen("../../../target/debug/nodex-agent", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     time.sleep(5)
@@ -28,14 +29,15 @@ for s in range(2, 12):
         )
     time.sleep(5)
     proc.kill()
-    results[key] = proc.stdout.readlines()
+    v = list(map(lambda x: float(x.decode().strip('dur: ').strip(' us\n')), proc.stdout.readlines()))
+    results[key] = np.mean(v)
+    print(results[key])
 
 xs = []
 ys = []
 for k, v in results.items():
    xs.append(float(len(k)))
-   v = list(map(lambda x: float(x.decode().strip('dur: ').strip(' us\n')), v))
-   ys.append(np.mean(v))
+   ys.append(v)
 
 np.savez(experiment, xs, ys)
 fig, ax = plt.subplots()
