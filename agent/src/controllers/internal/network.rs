@@ -21,10 +21,7 @@ pub async fn handler(
         Ok(_) => Ok(HttpResponse::Ok().json("ok")),
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(create_agent_error(
-                AgentErrorCode::NetworkInternal,
-                "Internal Server Error",
-            ))
+            Ok(create_agent_error(AgentErrorCode::NetworkInternal))
         }
     }
 }
