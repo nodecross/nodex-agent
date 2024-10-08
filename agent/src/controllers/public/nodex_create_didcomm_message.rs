@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use protocol::didcomm::encrypted::DidCommEncryptedServiceGenerateError as S;
 
+use crate::errors::{create_agent_error, AgentErrorCode};
 use crate::nodex::utils::did_accessor::DidAccessorImpl;
 use crate::usecase::didcomm_message_usecase::GenerateDidcommMessageUseCaseError as U;
 use crate::{services::studio::Studio, usecase::didcomm_message_usecase::DidcommMessageUseCase};
@@ -35,28 +36,40 @@ pub async fn handler(
         Err(e) => match e {
             U::MessageActivity(e) => Ok(utils::handle_status(e)),
             U::ServiceGenerate(S::DidDocNotFound(target)) => {
-                log::warn!("Target DID not found. did = {}", target);
-                Ok(HttpResponse::NotFound().finish())
+                log::warn!("target DID not found. did = {}", target);
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageNoDid,
+                ))
             }
             U::ServiceGenerate(S::DidPublicKeyNotFound(e)) => {
-                log::warn!("cannot public key: {}", e);
-                Ok(HttpResponse::BadRequest().body(e.to_string()))
+                log::warn!("cannot find public key: {}", e);
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageNoPubKey,
+                ))
             }
             U::Json(e) | U::ServiceGenerate(S::Json(e)) => {
                 log::warn!("json error: {}", e);
-                Ok(HttpResponse::InternalServerError().finish())
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageInternal,
+                ))
             }
             U::ServiceGenerate(S::VcService(e)) => {
-                log::warn!("verify error: {}", e);
-                Ok(HttpResponse::Unauthorized().finish())
+                log::warn!("verify failed: {}", e);
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageVerifyFailed,
+                ))
             }
             U::ServiceGenerate(S::SidetreeFindRequestFailed(e)) => {
                 log::warn!("sidetree error: {}", e);
-                Ok(HttpResponse::InternalServerError().finish())
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageInternal,
+                ))
             }
             U::ServiceGenerate(S::EncryptFailed(e)) => {
                 log::warn!("decrypt failed: {}", e);
-                Ok(HttpResponse::InternalServerError().finish())
+                Ok(create_agent_error(
+                    AgentErrorCode::CreateDidCommMessageInternal,
+                ))
             }
         },
     }
