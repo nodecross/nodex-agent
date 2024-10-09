@@ -21,6 +21,8 @@ pub enum AgentErrorCode {
     VersionInternal = 5002,
     #[error("Internal Server Error")]
     CreateDidCommMessageInternal = 5003,
+    #[error("verify failed")]
+    CreateIdentifierInternal = 5004,
 }
 
 #[derive(Serialize)]
