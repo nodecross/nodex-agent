@@ -30,6 +30,8 @@ pub enum AgentErrorCode {
     CreateIdentifierInternal = 5004,
     #[error("Internal Server Error")]
     CreateVerifiableMessageInternal = 5005,
+    #[error("Internal Server Error")]
+    FindIdentifierInternal = 5006,
 }
 
 #[derive(Serialize)]
