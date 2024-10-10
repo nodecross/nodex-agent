@@ -19,6 +19,10 @@ pub enum AgentErrorCode {
     VerifyDidcommMessageNoMetadata = 1006,
     #[error("public key not found")]
     VerifyVerifiableMessageNoPublicKey = 1007,
+    #[error("key_name is required")]
+    SendAttributeNoKeyName = 1008,
+    #[error("value is required")]
+    SendAttributeNoValue = 1009,
 
     #[error("this message is not addressed to me")]
     VerifyDidcommMessageNotAddressedToMe = 2001,
@@ -59,6 +63,8 @@ pub enum AgentErrorCode {
     VerifyDidcommMessageInternal = 5007,
     #[error("Internal Server Error")]
     VerifyVerifiableMessageInternal = 5008,
+    #[error("value is required")]
+    SendAttributeInternal = 5009,
 }
 
 #[derive(Serialize)]
