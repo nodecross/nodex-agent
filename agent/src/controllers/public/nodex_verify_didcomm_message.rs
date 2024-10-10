@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use protocol::didcomm::encrypted::DidCommEncryptedServiceVerifyError as S;
 use protocol::didcomm::types::DidCommMessage;
 
-use crate::errors::{create_agent_error, AgentError, AgentErrorCode};
+use crate::errors::{create_agent_error, AgentErrorCode};
 use crate::nodex::utils::did_accessor::DidAccessorImpl;
 use crate::{
     services::studio::Studio,
