@@ -21,14 +21,10 @@ runs:
       if: ${{ inputs.use-cache == 'true' }}
       uses: Swatinem/rust-cache@v2
 
-    - name: (install) llvm-tools-preview
-      shell: bash
-      run: rustup component add llvm-tools-preview
-
     - name: (install) install development tools
       uses: taiki-e/install-action@v2
       with:
-        tool: cargo-llvm-cov
+        tool: cargo-nextest
 
     - name: (setup) copy default config to home
       shell: bash
@@ -40,10 +36,4 @@ runs:
 
     - name: (run) tests
       shell: bash
-      run: cargo llvm-cov --lcov --output-path coverage.lcov
-
-    - name: (run) upload to coveralls
-      uses: coverallsapp/github-action@v2
-      with:
-        github-token: ${{ inputs.github-token }}
-        path-to-lcov: coverage.lcov
+      run: cargo nextest run --all
