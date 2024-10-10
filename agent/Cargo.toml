@@ -15,7 +15,7 @@ actix-web = { workspace = true }
 anyhow = { workspace = true }
 bytes = { workspace = true }
 chrono = { workspace = true }
-clap = { version = "4.5.9", features = ["cargo", "derive"] }
+clap = { version = "4.5.19", features = ["cargo", "derive"] }
 cuid = { workspace = true }
 dirs = "5.0.1"
 dotenvy = "0.15.7"
