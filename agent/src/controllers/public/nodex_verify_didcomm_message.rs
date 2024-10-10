@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use protocol::didcomm::encrypted::DidCommEncryptedServiceVerifyError as S;
 use protocol::didcomm::types::DidCommMessage;
 
+use crate::errors::{create_agent_error, AgentError, AgentErrorCode};
 use crate::nodex::utils::did_accessor::DidAccessorImpl;
 use crate::{
     services::studio::Studio,
@@ -37,41 +38,59 @@ pub async fn handler(
             Err(e) => match e {
                 U::MessageActivity(e) => Ok(utils::handle_status(e)),
                 U::NotAddressedToMe => {
-                    log::warn!("its not to me: {}", e);
-                    Ok(HttpResponse::Forbidden().finish())
+                    log::warn!("this message is not addressed to me: {}", e);
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageNotAddressedToMe,
+                    ))
                 }
                 U::ServiceVerify(S::FindSender(e)) => {
                     log::warn!("cannot find sender: {}", e);
-                    Ok(HttpResponse::BadRequest().body(e.to_string()))
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageNoSender,
+                    ))
                 }
                 U::ServiceVerify(S::DidPublicKeyNotFound(e)) => {
-                    log::warn!("cannot public key: {}", e);
-                    Ok(HttpResponse::BadRequest().body(e.to_string()))
+                    log::warn!("cannot find public key: {}", e);
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageNoPublicKey,
+                    ))
                 }
                 U::ServiceVerify(S::MetadataBodyNotFound(e)) => {
                     let e = e.map(|e| e.to_string()).unwrap_or("".to_string());
-                    log::warn!("cannot find sender: {}", e);
-                    Ok(HttpResponse::BadRequest().body(e))
+                    log::warn!("cannot find metadata: {}", e);
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageNoMetadata,
+                    ))
                 }
                 U::ServiceVerify(S::VcService(e)) => {
-                    log::warn!("verify error: {}", e);
-                    Ok(HttpResponse::Unauthorized().finish())
+                    log::warn!("verify failed: {}", e);
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageVerifyFailed,
+                    ))
                 }
                 U::ServiceVerify(S::DidDocNotFound(target)) => {
-                    log::warn!("Target DID not found. did = {}", target);
-                    Ok(HttpResponse::NotFound().finish())
+                    log::warn!("target DID not found. DID = {}", target);
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageNoTargetDid,
+                    ))
                 }
                 U::Json(e) | U::ServiceVerify(S::Json(e)) => {
                     log::warn!("json error: {}", e);
-                    Ok(HttpResponse::InternalServerError().finish())
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageInternal,
+                    ))
                 }
                 U::ServiceVerify(S::DecryptFailed(e)) => {
                     log::warn!("decrypt failed: {}", e);
-                    Ok(HttpResponse::InternalServerError().finish())
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageInternal,
+                    ))
                 }
                 U::ServiceVerify(S::SidetreeFindRequestFailed(e)) => {
                     log::warn!("sidetree error: {}", e);
-                    Ok(HttpResponse::InternalServerError().finish())
+                    Ok(create_agent_error(
+                        AgentErrorCode::VerifyDidcommMessageInternal,
+                    ))
                 }
             },
         },

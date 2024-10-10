@@ -50,7 +50,7 @@ pub async fn handler(
             U::Json(e) | U::ServiceGenerate(S::Json(e)) => {
                 log::warn!("json error: {}", e);
                 Ok(create_agent_error(
-                    AgentErrorCode::CreateDidCommMessageInternal,
+                    AgentErrorCode::CreateDidcommMessageInternal,
                 ))
             }
             U::ServiceGenerate(S::VcService(e)) => {
@@ -62,13 +62,13 @@ pub async fn handler(
             U::ServiceGenerate(S::SidetreeFindRequestFailed(e)) => {
                 log::warn!("sidetree error: {}", e);
                 Ok(create_agent_error(
-                    AgentErrorCode::CreateDidCommMessageInternal,
+                    AgentErrorCode::CreateDidcommMessageInternal,
                 ))
             }
             U::ServiceGenerate(S::EncryptFailed(e)) => {
                 log::warn!("decrypt failed: {}", e);
                 Ok(create_agent_error(
-                    AgentErrorCode::CreateDidCommMessageInternal,
+                    AgentErrorCode::CreateDidcommMessageInternal,
                 ))
             }
         },

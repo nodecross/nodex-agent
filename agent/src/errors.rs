@@ -11,27 +11,42 @@ pub enum AgentErrorCode {
     VersionNoPath = 1002,
     #[error("cannot find public key")]
     CreateDidCommMessageNoPubKey = 1003,
+    #[error("sender not found")]
+    VerifyDidcommMessageNoSender = 1005,
+    #[error("public key not found")]
+    VerifyDidcommMessageNoPublicKey = 1004,
+    #[error("metadata not found")]
+    VerifyDidcommMessageNoMetadata = 1006,
+
+    #[error("this message is not addressed to me")]
+    VerifyDidcommMessageNotAddressedToMe = 2001,
 
     #[error("verify failed")]
     CreateDidCommMessageVerifyFailed = 3001,
+    #[error("verify failed")]
+    VerifyDidcommMessageVerifyFailed = 3002,
 
     #[error("target DID not found")]
     CreateDidCommMessageNoDid = 4001,
     #[error("destination DID not found")]
     CreateVerifiableMessageNoDestination = 4002,
+    #[error("target DID not found")]
+    VerifyDidcommMessageNoTargetDid = 4003,
 
     #[error("Internal Server Error")]
     NetworkInternal = 5001,
     #[error("Internal Server Error")]
     VersionInternal = 5002,
     #[error("Internal Server Error")]
-    CreateDidCommMessageInternal = 5003,
+    CreateDidcommMessageInternal = 5003,
     #[error("Internal Server Error")]
     CreateIdentifierInternal = 5004,
     #[error("Internal Server Error")]
     CreateVerifiableMessageInternal = 5005,
     #[error("Internal Server Error")]
     FindIdentifierInternal = 5006,
+    #[error("Internal Server Error")]
+    VerifyDidcommMessageInternal = 5007,
 }
 
 #[derive(Serialize)]
