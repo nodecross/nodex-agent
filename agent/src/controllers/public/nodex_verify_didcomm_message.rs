@@ -32,7 +32,12 @@ pub async fn handler(
         DidcommMessageUseCase::new(Studio::new(), utils::did_repository(), DidAccessorImpl {});
 
     match serde_json::from_str::<DidCommMessage>(&json.message) {
-        Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string())),
+        Err(e) => {
+            log::warn!("json error: {}", e);
+            Ok(create_agent_error(
+                AgentErrorCode::VerifyDidcommMessageJsonError,
+            ))
+        }
         Ok(message) => match usecase.verify(message, now).await {
             Ok(v) => Ok(HttpResponse::Ok().json(v)),
             Err(e) => match e {

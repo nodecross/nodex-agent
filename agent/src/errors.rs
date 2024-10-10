@@ -17,24 +17,28 @@ pub enum AgentErrorCode {
     VerifyDidcommMessageNoPublicKey = 1004,
     #[error("metadata not found")]
     VerifyDidcommMessageNoMetadata = 1006,
+    #[error("json error")]
+    VerifyDidcommMessageJsonError = 1007,
     #[error("public key not found")]
-    VerifyVerifiableMessageNoPublicKey = 1007,
+    VerifyVerifiableMessageNoPublicKey = 1008,
+    #[error("json error")]
+    VerifyVerifiableMessageJsonError = 1009,
     #[error("key_name is required")]
-    SendAttributeNoKeyName = 1008,
+    SendAttributeNoKeyName = 1010,
     #[error("value is required")]
-    SendAttributeNoValue = 1009,
+    SendAttributeNoValue = 1011,
     #[error("key is required")]
-    SendCustomMetricNoKey = 1010,
+    SendCustomMetricNoKey = 1012,
     #[error("occurred_at is invalid format")]
-    SendCustomMetricInvalidOccurredAt = 1011,
+    SendCustomMetricInvalidOccurredAt = 1013,
     #[error("key is invalid")]
-    SendEventNoKey = 1012,
+    SendEventNoKey = 1014,
     #[error("detail is invalid")]
-    SendEventNoDetail = 1013,
+    SendEventNoDetail = 1015,
     #[error("occurred_at is invalid format")]
-    SendEventInvalidOccurredAt = 1014,
+    SendEventInvalidOccurredAt = 1016,
     #[error("Bad Request")]
-    MessageActivityBadRequest = 1015,
+    MessageActivityBadRequest = 1017,
 
     #[error("this message is not addressed to me")]
     VerifyDidcommMessageNotAddressedToMe = 2001,

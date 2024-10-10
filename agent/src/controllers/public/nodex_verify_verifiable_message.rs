@@ -31,7 +31,12 @@ pub async fn handler(
         VerifiableMessageUseCase::new(Studio::new(), repo.clone(), DidAccessorImpl {}, repo);
 
     match serde_json::from_str::<VerifiableCredentials>(&json.message) {
-        Err(e) => Ok(HttpResponse::BadRequest().body(e.to_string())),
+        Err(e) => {
+            log::warn!("json error: {}", e);
+            Ok(create_agent_error(
+                AgentErrorCode::VerifyVerifiableMessageJsonError,
+            ))
+        }
         Ok(vc) => match usecase.verify(vc, now).await {
             Ok(v) => Ok(HttpResponse::Ok().json(v)),
             Err(e) => match e {
