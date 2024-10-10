@@ -58,8 +58,8 @@ pub enum AgentErrorCode {
 
     #[error("target DID not found")]
     CreateDidCommMessageNoDid = 4001,
-    #[error("destination DID not found")]
-    CreateVerifiableMessageNoDestination = 4002,
+    #[error("target DID not found")]
+    CreateVerifiableMessageNoTargetDid = 4002,
     #[error("target DID not found")]
     VerifyDidcommMessageNoTargetDid = 4003,
     #[error("identifier not found")]

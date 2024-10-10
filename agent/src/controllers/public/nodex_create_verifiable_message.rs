@@ -41,7 +41,7 @@ pub async fn handler(
                     log::error!("{:?}", e);
                 }
                 Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageNoDestination,
+                    AgentErrorCode::CreateVerifiableMessageNoTargetDid,
                 ))
             }
             U::DidVcServiceGenerate(e) => {
