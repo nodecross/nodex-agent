@@ -33,11 +33,15 @@ pub enum AgentErrorCode {
     SendEventNoDetail = 1013,
     #[error("occurred_at is invalid format")]
     SendEventInvalidOccurredAt = 1014,
+    #[error("Bad Request")]
+    MessageActivityBadRequest = 1015,
 
     #[error("this message is not addressed to me")]
     VerifyDidcommMessageNotAddressedToMe = 2001,
     #[error("this message is not addressed to me")]
     VerifyVerifiableMessageNotAddressedToMe = 2002,
+    #[error("Forbidden")]
+    MessageActivityForbidden = 2003,
 
     #[error("verify failed")]
     CreateDidCommMessageVerifyFailed = 3001,
@@ -45,6 +49,8 @@ pub enum AgentErrorCode {
     VerifyDidcommMessageVerifyFailed = 3002,
     #[error("verify failed")]
     VerifyVerifiableMessageVerifyFailed = 3003,
+    #[error("Unauthorized")]
+    MessageActivityUnauthorized = 3004,
 
     #[error("target DID not found")]
     CreateDidCommMessageNoDid = 4001,
@@ -56,6 +62,8 @@ pub enum AgentErrorCode {
     VerifyVerifiableMessageNoIdentifier = 4004,
     #[error("target DID not found")]
     VerifyVerifiableMessageNoTargetDid = 4005,
+    #[error("Not Found")]
+    MessageActivityNotFound = 4006,
 
     #[error("Internal Server Error")]
     NetworkInternal = 5001,
@@ -79,6 +87,11 @@ pub enum AgentErrorCode {
     SendCustomMetricInternal = 5010,
     #[error("Internal Server Error")]
     SendEventInternal = 5011,
+    #[error("Internal Server Error")]
+    MessageActivityInternal = 5012,
+
+    #[error("Conflict")]
+    MessageActivityConflict = 6001,
 }
 
 #[derive(Serialize)]
@@ -106,6 +119,10 @@ impl From<AgentError> for HttpResponse {
             HttpResponse::Unauthorized().json(error)
         } else if (4000..5000).contains(&code) {
             HttpResponse::NotFound().json(error)
+        } else if (5000..6000).contains(&code) {
+            HttpResponse::InternalServerError().json(error)
+        } else if (6000..6100).contains(&code) {
+            HttpResponse::Conflict().json(error)
         } else {
             HttpResponse::InternalServerError().json(error)
         }
