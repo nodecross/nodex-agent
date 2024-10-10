@@ -3,6 +3,7 @@ use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    errors::{create_agent_error, AgentErrorCode},
     repository::custom_metric_repository::CustomMetricStoreRequest,
     usecase::custom_metric_usecase::CustomMetricUsecase,
 };
@@ -19,18 +20,22 @@ pub async fn handler(
     web::Json(json): web::Json<MessageContainer>,
 ) -> actix_web::Result<HttpResponse> {
     if json.key.is_empty() {
-        return Ok(HttpResponse::BadRequest().json("key is required"));
+        return Ok(create_agent_error(AgentErrorCode::SendCustomMetricNoKey));
     }
 
     let occurred_at = match json.occurred_at.parse::<i64>() {
         Ok(timestamp) => match DateTime::from_timestamp(timestamp, 0) {
             Some(dt) => dt,
             _ => {
-                return Ok(HttpResponse::BadRequest().json("occurred_at is invalid format"));
+                return Ok(create_agent_error(
+                    AgentErrorCode::SendCustomMetricInvalidOccurredAt,
+                ));
             }
         },
         Err(_) => {
-            return Ok(HttpResponse::BadRequest().json("occurred_at is invalid format"));
+            return Ok(create_agent_error(
+                AgentErrorCode::SendCustomMetricInvalidOccurredAt,
+            ));
         }
     };
 
@@ -49,7 +54,7 @@ pub async fn handler(
         }
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(HttpResponse::InternalServerError().json("internal server error"))
+            Ok(create_agent_error(AgentErrorCode::SendCustomMetricInternal))
         }
     }
 }
