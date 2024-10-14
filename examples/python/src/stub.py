@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from sock import post
 
-experiment = "tls_vc"
+experiment = "without_tls_didcomm"
 results = {}
 
 def randomname(n):
@@ -16,7 +16,7 @@ def randomname(n):
 
 for s in tqdm(range(2, 20)):
     key = randomname(2 ** s)
-    proc = subprocess.Popen("../../../target/debug/nodex-agent", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen("../../../target/release/nodex-agent", shell=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     time.sleep(5)
     for _ in range(100):
         json_response = post(
