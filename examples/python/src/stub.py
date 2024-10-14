@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from sock import post
 
-experiment = "https_only"
+experiment = "http_vc"
 results = {}
 
 def randomname(n):
