@@ -245,10 +245,10 @@ impl Studio {
         path: &str,
         request: T,
     ) -> anyhow::Result<()> {
-        let my_did = self.did_accessor.get_my_did();
-        let my_keyring = self.did_accessor.get_my_keyring();
-        let model =
-            VerifiableCredentials::new(my_did, serde_json::to_value(request)?, chrono::Utc::now());
+        // let my_did = self.did_accessor.get_my_did();
+        // let my_keyring = self.did_accessor.get_my_keyring();
+        // let model =
+        //     VerifiableCredentials::new(my_did, serde_json::to_value(request)?, chrono::Utc::now());
         // let project_did = {
         //     let network = crate::network_config();
         //     let network = network.lock();
@@ -263,9 +263,12 @@ impl Studio {
         // )
         // .await
         // .context("failed to generate payload")?;
-        let payload = DidVcService::generate(&self.did_repository, model, &my_keyring)
-            .context("failed to generate payload")?;
-        let payload = serde_json::to_string(&payload).context("failed to serialize")?;
+        // let payload = serde_json::to_string(&payload).context("failed to serialize")?;
+
+        // let payload = DidVcService::generate(&self.did_repository, model, &my_keyring)
+        //     .context("failed to generate payload")?;
+
+        let payload = serde_json::to_string(&request).context("failed to serialize")?;
 
         async fn send(
             studio: &Studio,
