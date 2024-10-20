@@ -100,21 +100,21 @@ pub enum AgentErrorCode {
 
 #[derive(Serialize)]
 pub struct AgentError {
-    code: AgentErrorCode,
+    code: u16,
     message: String,
 }
 
 impl AgentError {
     pub fn new(code: AgentErrorCode) -> Self {
         Self {
-            code,
+            code: code as u16,
             message: format!("{}", code),
         }
     }
 }
 impl From<AgentError> for HttpResponse {
     fn from(error: AgentError) -> Self {
-        let code = error.code as u16;
+        let code = error.code;
         if (1000..2000).contains(&code) {
             HttpResponse::BadRequest().json(error)
         } else if (2000..3000).contains(&code) {
