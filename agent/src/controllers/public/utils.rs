@@ -3,7 +3,6 @@ use anyhow::Context as _;
 
 use protocol::did::did_repository::DidRepositoryImpl;
 
-use crate::errors::{create_agent_error, AgentErrorCode};
 use crate::nodex::utils::sidetree_client::SideTreeClient;
 use crate::repository::message_activity_repository::MessageActivityHttpError;
 use crate::server_config;
@@ -20,24 +19,24 @@ pub fn handle_status(e: MessageActivityHttpError) -> HttpResponse {
     match e {
         MessageActivityHttpError::BadRequest(message) => {
             log::warn!("Bad Request: {}", message);
-            create_agent_error(AgentErrorCode::MessageActivityBadRequest)
-        }
-        MessageActivityHttpError::Forbidden(message) => {
-            log::warn!("Forbidden: {}", message);
-            create_agent_error(AgentErrorCode::MessageActivityForbidden)
+            HttpResponse::BadRequest().body(message)
         }
         MessageActivityHttpError::Unauthorized(message) => {
             log::warn!("Unauthorized: {}", message);
-            create_agent_error(AgentErrorCode::MessageActivityUnauthorized)
+            HttpResponse::Unauthorized().body(message)
+        }
+        MessageActivityHttpError::Forbidden(message) => {
+            log::warn!("Forbidden: {}", message);
+            HttpResponse::Forbidden().body(message)
         }
         MessageActivityHttpError::NotFound(message) => {
             log::warn!("Not Found: {}", message);
-            create_agent_error(AgentErrorCode::MessageActivityNotFound)
+            HttpResponse::NotFound().body(message)
         }
         MessageActivityHttpError::Conflict(message) => {
             log::warn!("Conflict: {}", message);
-            create_agent_error(AgentErrorCode::MessageActivityConflict)
+            HttpResponse::Conflict().body(message)
         }
-        _ => create_agent_error(AgentErrorCode::MessageActivityInternal),
+        _ => HttpResponse::InternalServerError().finish(),
     }
 }

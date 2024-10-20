@@ -2,7 +2,6 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    errors::{create_agent_error, AgentErrorCode},
     repository::attribute_repository::AttributeStoreRequest,
     usecase::attribute_usecase::AttributeUsecase,
 };
@@ -18,10 +17,10 @@ pub async fn handler(
     web::Json(json): web::Json<MessageContainer>,
 ) -> actix_web::Result<HttpResponse> {
     if json.key_name.is_empty() {
-        return Ok(create_agent_error(AgentErrorCode::SendAttributeNoKeyName));
+        return Ok(HttpResponse::BadRequest().json("key_name is required"));
     }
     if json.value.is_empty() {
-        return Ok(create_agent_error(AgentErrorCode::SendAttributeNoValue));
+        return Ok(HttpResponse::BadRequest().json("value is required"));
     }
 
     let usecase = AttributeUsecase::new();
@@ -38,7 +37,7 @@ pub async fn handler(
         }
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(create_agent_error(AgentErrorCode::SendAttributeInternal))
+            Ok(HttpResponse::InternalServerError().json("internal server error"))
         }
     }
 }

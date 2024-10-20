@@ -2,7 +2,6 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::{create_agent_error, AgentErrorCode};
 use crate::nodex::utils::did_accessor::DidAccessorImpl;
 use crate::usecase::verifiable_message_usecase::CreateVerifiableMessageUseCaseError as U;
 use crate::{
@@ -40,21 +39,15 @@ pub async fn handler(
                 if let Some(e) = e {
                     log::error!("{:?}", e);
                 }
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageNoTargetDid,
-                ))
+                Ok(HttpResponse::NotFound().finish())
             }
             U::DidVcServiceGenerate(e) => {
                 log::error!("{:?}", e);
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageInternal,
-                ))
+                Ok(HttpResponse::InternalServerError().finish())
             }
             U::Json(e) => {
                 log::warn!("json error: {}", e);
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageInternal,
-                ))
+                Ok(HttpResponse::InternalServerError().finish())
             }
         },
     }

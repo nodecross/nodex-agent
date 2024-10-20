@@ -39,7 +39,6 @@ use usecase::metric_usecase::MetricUsecase;
 
 mod config;
 mod controllers;
-mod errors;
 mod handlers;
 mod network;
 mod nodex;
