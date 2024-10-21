@@ -1,46 +1,38 @@
 use actix_web::{web, HttpRequest, HttpResponse};
-use chrono::DateTime;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    errors::{create_agent_error, AgentErrorCode},
+    errors::{AgentError, AgentErrorCode},
     repository::event_repository::EventStoreRequest,
     usecase::event_usecase::EventUsecase,
 };
 
+use super::utils::str2time;
+
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
+    #[serde(default)]
     key: String,
+    #[serde(default)]
     detail: String,
+    #[serde(default)]
     occurred_at: String,
 }
 
 pub async fn handler(
     _req: HttpRequest,
     web::Json(json): web::Json<MessageContainer>,
-) -> actix_web::Result<HttpResponse> {
+) -> actix_web::Result<HttpResponse, AgentError> {
     if json.key.is_empty() {
-        return Ok(create_agent_error(AgentErrorCode::SendEventNoKey));
+        Err(AgentErrorCode::SendEventNoKey)?
     }
     if json.detail.is_empty() {
-        return Ok(create_agent_error(AgentErrorCode::SendEventNoDetail));
+        Err(AgentErrorCode::SendEventNoDetail)?
     }
 
-    let occurred_at = match json.occurred_at.parse::<i64>() {
-        Ok(timestamp) => match DateTime::from_timestamp(timestamp, 0) {
-            Some(dt) => dt,
-            _ => {
-                return Ok(create_agent_error(
-                    AgentErrorCode::SendEventInvalidOccurredAt,
-                ))
-            }
-        },
-        Err(_) => {
-            return Ok(create_agent_error(
-                AgentErrorCode::SendEventInvalidOccurredAt,
-            ))
-        }
-    };
+    let occurred_at =
+        str2time(&json.occurred_at).ok_or(AgentErrorCode::SendEventInvalidOccurredAt)?;
 
     let usecase = EventUsecase::new();
     match usecase
@@ -57,7 +49,7 @@ pub async fn handler(
         }
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(create_agent_error(AgentErrorCode::SendEventInternal))
+            Err(AgentErrorCode::SendEventInternal)?
         }
     }
 }

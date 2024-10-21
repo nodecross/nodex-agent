@@ -1,5 +1,5 @@
 use crate::{
-    errors::{create_agent_error, AgentErrorCode},
+    errors::{AgentError, AgentErrorCode},
     services::studio::Studio,
 };
 use actix_web::{web, HttpRequest, HttpResponse};
@@ -15,13 +15,13 @@ pub struct MessageContainer {
 pub async fn handler(
     _req: HttpRequest,
     web::Json(_): web::Json<MessageContainer>,
-) -> actix_web::Result<HttpResponse> {
+) -> actix_web::Result<HttpResponse, AgentError> {
     let studio = Studio::new();
     match studio.network().await {
         Ok(_) => Ok(HttpResponse::Ok().json("ok")),
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(create_agent_error(AgentErrorCode::NetworkInternal))
+            Err(AgentErrorCode::NetworkInternal)?
         }
     }
 }

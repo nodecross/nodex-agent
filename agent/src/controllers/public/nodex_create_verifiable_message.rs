@@ -2,7 +2,7 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::errors::{create_agent_error, AgentErrorCode};
+use crate::errors::{AgentError, AgentErrorCode};
 use crate::nodex::utils::did_accessor::DidAccessorImpl;
 use crate::usecase::verifiable_message_usecase::CreateVerifiableMessageUseCaseError as U;
 use crate::{
@@ -22,7 +22,7 @@ pub struct MessageContainer {
 pub async fn handler(
     _req: HttpRequest,
     web::Json(json): web::Json<MessageContainer>,
-) -> actix_web::Result<HttpResponse> {
+) -> actix_web::Result<HttpResponse, AgentError> {
     let now = Utc::now();
 
     let repo = utils::did_repository();
@@ -35,26 +35,20 @@ pub async fn handler(
     {
         Ok(v) => Ok(HttpResponse::Ok().body(v)),
         Err(e) => match e {
-            U::MessageActivity(e) => Ok(utils::handle_status(e)),
+            U::MessageActivity(e) => Err(utils::handle_status(e)),
             U::DestinationNotFound(e) => {
                 if let Some(e) = e {
                     log::error!("{:?}", e);
                 }
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageNoTargetDid,
-                ))
+                Err(AgentErrorCode::CreateVerifiableMessageNoTargetDid)?
             }
             U::DidVcServiceGenerate(e) => {
                 log::error!("{:?}", e);
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageInternal,
-                ))
+                Err(AgentErrorCode::CreateVerifiableMessageInternal)?
             }
             U::Json(e) => {
                 log::warn!("json error: {}", e);
-                Ok(create_agent_error(
-                    AgentErrorCode::CreateVerifiableMessageInternal,
-                ))
+                Err(AgentErrorCode::CreateVerifiableMessageInternal)?
             }
         },
     }

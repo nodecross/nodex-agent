@@ -1,4 +1,5 @@
 use actix_web::HttpResponse;
+use actix_web::{error, http::StatusCode};
 use serde::Serialize;
 use std::convert::From;
 use thiserror::Error;
@@ -98,10 +99,16 @@ pub enum AgentErrorCode {
     MessageActivityConflict = 6001,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct AgentError {
     code: u16,
     message: String,
+}
+
+impl std::fmt::Display for AgentError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "code: {}, message: {}", self.code, self.message)
+    }
 }
 
 impl AgentError {
@@ -112,8 +119,8 @@ impl AgentError {
         }
     }
 }
-impl From<AgentError> for HttpResponse {
-    fn from(error: AgentError) -> Self {
+impl From<&AgentError> for HttpResponse {
+    fn from(error: &AgentError) -> Self {
         let code = error.code;
         if (1000..2000).contains(&code) {
             HttpResponse::BadRequest().json(error)
@@ -132,6 +139,20 @@ impl From<AgentError> for HttpResponse {
         }
     }
 }
-pub fn create_agent_error(code: AgentErrorCode) -> HttpResponse {
-    AgentError::new(code).into()
+
+impl From<AgentErrorCode> for AgentError {
+    fn from(code: AgentErrorCode) -> Self {
+        AgentError::new(code)
+    }
+}
+
+impl error::ResponseError for AgentError {
+    fn error_response(&self) -> HttpResponse {
+        self.into()
+    }
+
+    fn status_code(&self) -> StatusCode {
+        let res: HttpResponse = self.into();
+        res.status()
+    }
 }
