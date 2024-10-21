@@ -84,7 +84,7 @@ fn config_app<C: TransferClient + 'static>(
             )
             .route(
                 "/attributes",
-                web::post().to(controllers::public::send_attributes::handler),
+                web::post().to(controllers::public::send_attribute::handler),
             )
             // NOTE: Internal (Private) Routes
             .service(

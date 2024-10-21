@@ -1,4 +1,7 @@
-use crate::services::studio::Studio;
+use crate::{
+    errors::{create_agent_error, AgentErrorCode},
+    services::studio::Studio,
+};
 use actix_web::{web, HttpRequest, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -18,7 +21,7 @@ pub async fn handler(
         Ok(_) => Ok(HttpResponse::Ok().json("ok")),
         Err(e) => {
             log::error!("{:?}", e);
-            Ok(HttpResponse::InternalServerError().json("Internal Server Error"))
+            Ok(create_agent_error(AgentErrorCode::NetworkInternal))
         }
     }
 }
