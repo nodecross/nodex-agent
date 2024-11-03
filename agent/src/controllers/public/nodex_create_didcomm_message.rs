@@ -14,8 +14,11 @@ use super::utils;
 // NOTE: POST /create-didcomm-message
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
+    #[serde(default)]
     destination_did: String,
+    #[serde(default)]
     message: String,
+    #[serde(default)]
     operation_tag: String,
 }
 
@@ -23,6 +26,16 @@ pub async fn handler(
     _req: HttpRequest,
     web::Json(json): web::Json<MessageContainer>,
 ) -> actix_web::Result<HttpResponse, AgentError> {
+    if json.destination_did.is_empty() {
+        Err(AgentErrorCode::CreateDidCommMessageNoDestinationDid)?
+    }
+    if json.message.is_empty() {
+        Err(AgentErrorCode::CreateDidCommMessageNoMessage)?
+    }
+    if json.operation_tag.is_empty() {
+        Err(AgentErrorCode::CreateDidCommMessageNoOperationTag)?
+    }
+
     let now = Utc::now();
 
     let usecase =

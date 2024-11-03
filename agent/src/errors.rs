@@ -10,36 +10,42 @@ pub enum AgentErrorCode {
     VersionNoBinaryUrl = 1001,
     #[error("path is required")]
     VersionNoPath = 1002,
+    #[error("destination_did is required")]
+    CreateDidCommMessageNoDestinationDid = 1003,
+    #[error("message is required")]
+    CreateDidCommMessageNoMessage = 1004,
+    #[error("operation_tag is required")]
+    CreateDidCommMessageNoOperationTag = 1005,
     #[error("cannot find public key")]
-    CreateDidCommMessageNoPubKey = 1003,
+    CreateDidCommMessageNoPubKey = 1006,
     #[error("sender not found")]
-    VerifyDidcommMessageNoSender = 1005,
+    VerifyDidcommMessageNoSender = 1007,
     #[error("public key not found")]
-    VerifyDidcommMessageNoPublicKey = 1004,
+    VerifyDidcommMessageNoPublicKey = 1008,
     #[error("metadata not found")]
-    VerifyDidcommMessageNoMetadata = 1006,
+    VerifyDidcommMessageNoMetadata = 1009,
     #[error("json error")]
-    VerifyDidcommMessageJsonError = 1007,
+    VerifyDidcommMessageJsonError = 1010,
     #[error("public key not found")]
-    VerifyVerifiableMessageNoPublicKey = 1008,
+    VerifyVerifiableMessageNoPublicKey = 1011,
     #[error("json error")]
-    VerifyVerifiableMessageJsonError = 1009,
+    VerifyVerifiableMessageJsonError = 1012,
     #[error("key_name is required")]
-    SendAttributeNoKeyName = 1010,
+    SendAttributeNoKeyName = 1013,
     #[error("value is required")]
-    SendAttributeNoValue = 1011,
+    SendAttributeNoValue = 1014,
     #[error("key is required")]
-    SendCustomMetricNoKey = 1012,
+    SendCustomMetricNoKey = 1015,
     #[error("occurred_at is invalid format")]
-    SendCustomMetricInvalidOccurredAt = 1013,
+    SendCustomMetricInvalidOccurredAt = 1016,
     #[error("key is invalid")]
-    SendEventNoKey = 1014,
+    SendEventNoKey = 1017,
     #[error("detail is invalid")]
-    SendEventNoDetail = 1015,
+    SendEventNoDetail = 1018,
     #[error("occurred_at is invalid format")]
-    SendEventInvalidOccurredAt = 1016,
+    SendEventInvalidOccurredAt = 1019,
     #[error("Bad Request")]
-    MessageActivityBadRequest = 1017,
+    MessageActivityBadRequest = 1020,
 
     #[error("this message is not addressed to me")]
     VerifyDidcommMessageNotAddressedToMe = 2001,
