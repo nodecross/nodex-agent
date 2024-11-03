@@ -107,7 +107,7 @@ pub enum AgentErrorCode {
     #[error("Internal Server Error")]
     MessageActivityInternal = 5012,
 
-    #[error("Conflict")]
+    #[error("it have already been verified")]
     MessageActivityConflict = 6001,
 }
 
