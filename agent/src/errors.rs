@@ -18,34 +18,40 @@ pub enum AgentErrorCode {
     CreateDidCommMessageNoOperationTag = 1005,
     #[error("cannot find public key")]
     CreateDidCommMessageNoPubKey = 1006,
+    #[error("destination_did is required")]
+    CreateVerifiableMessageNoDestinationDid = 1007,
+    #[error("message is required")]
+    CreateVerifiableMessageNoMessage = 1008,
+    #[error("operation_tag is required")]
+    CreateVerifiableMessageNoOperationTag = 1009,
     #[error("sender not found")]
-    VerifyDidcommMessageNoSender = 1007,
+    VerifyDidcommMessageNoSender = 1010,
     #[error("public key not found")]
-    VerifyDidcommMessageNoPublicKey = 1008,
+    VerifyDidcommMessageNoPublicKey = 1011,
     #[error("metadata not found")]
-    VerifyDidcommMessageNoMetadata = 1009,
+    VerifyDidcommMessageNoMetadata = 1012,
     #[error("json error")]
-    VerifyDidcommMessageJsonError = 1010,
+    VerifyDidcommMessageJsonError = 1013,
     #[error("public key not found")]
-    VerifyVerifiableMessageNoPublicKey = 1011,
+    VerifyVerifiableMessageNoPublicKey = 1014,
     #[error("json error")]
-    VerifyVerifiableMessageJsonError = 1012,
+    VerifyVerifiableMessageJsonError = 1015,
     #[error("key_name is required")]
-    SendAttributeNoKeyName = 1013,
+    SendAttributeNoKeyName = 1016,
     #[error("value is required")]
-    SendAttributeNoValue = 1014,
+    SendAttributeNoValue = 1017,
     #[error("key is required")]
-    SendCustomMetricNoKey = 1015,
+    SendCustomMetricNoKey = 1018,
     #[error("occurred_at is invalid format")]
-    SendCustomMetricInvalidOccurredAt = 1016,
+    SendCustomMetricInvalidOccurredAt = 1019,
     #[error("key is invalid")]
-    SendEventNoKey = 1017,
+    SendEventNoKey = 1020,
     #[error("detail is invalid")]
-    SendEventNoDetail = 1018,
+    SendEventNoDetail = 1021,
     #[error("occurred_at is invalid format")]
-    SendEventInvalidOccurredAt = 1019,
+    SendEventInvalidOccurredAt = 1022,
     #[error("Bad Request")]
-    MessageActivityBadRequest = 1020,
+    MessageActivityBadRequest = 1023,
 
     #[error("this message is not addressed to me")]
     VerifyDidcommMessageNotAddressedToMe = 2001,
