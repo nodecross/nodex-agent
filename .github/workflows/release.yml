@@ -70,7 +70,7 @@ jobs:
       - name: (run) Output package name for release
         run: |
           PACKAGE_NAME="nodex-agent"
-          VERSION=$(cargo get package.version)
+          VERSION=$(cargo get workspace.package.version)
           ARCHITECTURE=$(dpkg --print-architecture)
           UPLOAD_DEB_NAME="${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
           echo "UPLOAD_DEB_NAME=$UPLOAD_DEB_NAME" >> $GITHUB_ENV
@@ -126,7 +126,7 @@ jobs:
       - name: Set Crate Version as Environment Variable
         id: set_crate_version
         run: |
-          CARGO_TOML_VERSION=$(cargo get package.version)
+          CARGO_TOML_VERSION=$(cargo get workspace.package.version)
           echo "version=$CARGO_TOML_VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts

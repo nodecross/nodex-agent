@@ -14,14 +14,14 @@ keywords = ["did", "embedded", "iot", "root-of-trust"]
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/nodecross/nodex"
-version = "3.1.1"
+version = "3.2.0"
 
 [workspace.dependencies]
 actix-rt = "2.9.0"
 actix-web = "4.9.0"
 agent = { path = "./agent" }
-anyhow = "1.0.90"
-bytes = "1.6.1"
+anyhow = "1.0.91"
+bytes = "1.8.0"
 chrono = { version = "0.4", features = ["serde"] }
 cuid = "1.3.2"
 data-encoding = "2.6.0"
@@ -40,13 +40,13 @@ reqwest = { version = "0.12", features = [
 ], default-features = false }
 rstest = "0.21.0"
 rumqttc = "0.24.0"
-serde = { version = "1.0.209", features = ["derive"] }
+serde = { version = "1.0.213", features = ["derive"] }
 serde_jcs = "0.1.0"
 serde_json = "1.0.132"
 sha2 = "0.10.8"
 sysinfo = "0.30.13"
-thiserror = "1.0.64"
-tokio = { version = "1.40.0", features = ["full"] }
+thiserror = "1.0.65"
+tokio = { version = "1.41.0", features = ["full"] }
 trait-variant = "0.1.2"
 url = "2.5.2"
 uuid = { version = "1.10.0", features = [
