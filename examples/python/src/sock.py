@@ -2,6 +2,7 @@ import os
 import requests_unixsocket
 import json
 import urllib.parse
+import sys
 
 
 # Create a session that can make requests to Unix sockets
@@ -37,7 +38,7 @@ def call(method, path, payload):
             f"{response.status_code} {response.reason}\n"
             f"body : {json.dumps(response.json(), indent=4)}"
         )
-        exit(1)
+        sys.exit(1)
 
     elif response.status_code == 204:
         return "No content"
