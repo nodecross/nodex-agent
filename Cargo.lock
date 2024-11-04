@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "agent"
-version = "3.2.0"
+version = "3.3.0"
 dependencies = [
  "actix-rt",
  "actix-web",
@@ -2485,7 +2485,7 @@ dependencies = [
 
 [[package]]
 name = "protocol"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "actix-rt",
  "chrono",

@@ -14,7 +14,7 @@ keywords = ["did", "embedded", "iot", "root-of-trust"]
 license-file = "LICENSE"
 readme = "README.md"
 repository = "https://github.com/nodecross/nodex"
-version = "3.2.0"
+version = "3.3.0"
 
 [workspace.dependencies]
 actix-rt = "2.9.0"
