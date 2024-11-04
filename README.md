@@ -28,10 +28,6 @@ This repo where we develop libraries to be installed into your devices. It enabl
 - Mutiple OS support for Linux kernel x86(32bit) & x86-64(64bit), FreeRTOS ARM Cortex-M33(32bit)
 - RoT extensions for TPM, ARM TrustZone, and Renesas SCE
 
-## Install
-
-- [Build Guide](https://docs.nodecross.io/installation/00-overview.html)
-
 ## Developer's Document
 
 - NodeX Official Website<br />
