@@ -1,4 +1,4 @@
-use super::utils::str2time;
+use super::utils::milliseconds_to_time;
 use actix_web::{web, HttpRequest, HttpResponse};
 
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ pub struct MessageContainer {
     key: String,
     value: f32,
     #[serde(default)]
-    occurred_at: String,
+    occurred_at: u64,
 }
 
 pub async fn handler(
@@ -26,8 +26,8 @@ pub async fn handler(
         Err(AgentErrorCode::SendCustomMetricNoKey)?
     }
 
-    let occurred_at =
-        str2time(&json.occurred_at).ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
+    let occurred_at = milliseconds_to_time(json.occurred_at)
+        .ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
 
     let usecase = CustomMetricUsecase::new();
     match usecase

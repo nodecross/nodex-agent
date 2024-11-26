@@ -1,6 +1,5 @@
 use anyhow::Context as _;
 use chrono::{DateTime, Utc};
-
 use protocol::did::did_repository::DidRepositoryImpl;
 
 use crate::errors::{AgentError, AgentErrorCode};
@@ -42,7 +41,14 @@ pub fn handle_status(e: MessageActivityHttpError) -> AgentError {
     }
 }
 
-pub fn str2time(value: &str) -> Option<DateTime<Utc>> {
-    let timestamp = value.parse::<i64>().ok()?;
-    DateTime::from_timestamp(timestamp, 0)
+pub fn milliseconds_to_time(milliseconds: u64) -> Option<DateTime<Utc>> {
+    let milliseconds = milliseconds as i64;
+    match milliseconds.to_string().len() {
+        13 => {
+            let secs = milliseconds / 1000;
+            let nsecs = (milliseconds % 1000) * 1_000_000;
+            DateTime::from_timestamp(secs, nsecs as u32)
+        }
+        _ => None,
+    }
 }

@@ -8,7 +8,7 @@ use crate::{
     usecase::event_usecase::EventUsecase,
 };
 
-use super::utils::str2time;
+use super::utils::milliseconds_to_time;
 
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
@@ -17,7 +17,7 @@ pub struct MessageContainer {
     #[serde(default)]
     detail: String,
     #[serde(default)]
-    occurred_at: String,
+    occurred_at: u64,
 }
 
 pub async fn handler(
@@ -32,7 +32,7 @@ pub async fn handler(
     }
 
     let occurred_at =
-        str2time(&json.occurred_at).ok_or(AgentErrorCode::SendEventInvalidOccurredAt)?;
+        milliseconds_to_time(json.occurred_at).ok_or(AgentErrorCode::SendEventInvalidOccurredAt)?;
 
     let usecase = EventUsecase::new();
     match usecase
