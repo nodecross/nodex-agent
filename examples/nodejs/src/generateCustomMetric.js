@@ -4,7 +4,7 @@ import { post } from "./lib/sock.js";
   const payload = {
     key: "test-key",
     value: 10.52,
-    occurred_at: String(Math.floor(Date.now() / 1000)),
+    occurred_at: Date.now(),
   };
   const response = await post("/custom_metrics", payload);
 

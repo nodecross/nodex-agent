@@ -11,7 +11,7 @@ json_response = post(
     {
         "key": "test-key",
         "detail": "test-detail",
-        "occurred_at": str(int(time.time())),
+        "occurred_at": int(time.time() * 1000),
     },
 )
 
