@@ -7,7 +7,7 @@ else:
     from sock import post
 
 json_response = post(
-    "/custom_metrics",
+    "/custom-metrics",
     {
         "key": "test-key",
         "value": 10.52,

@@ -6,7 +6,7 @@ import { post } from "./lib/sock.js";
     value: 10.52,
     occurred_at: Date.now(),
   };
-  const response = await post("/custom_metrics", payload);
+  const response = await post("/custom-metrics", payload);
 
   console.log("The response is as follows.\n");
   console.log(response);
