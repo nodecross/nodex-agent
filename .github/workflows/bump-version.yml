@@ -69,8 +69,4 @@ jobs:
           title: "chore: bump version to v${{ steps.set_crate_version.outputs.version }}"
           body: |
             Bumps the version to v${{ steps.set_crate_version.outputs.version }}.
-
-            This PR was created by the [release workflow](${{ github.event.repository.html_url }}/actions/workflows/release.yml).
-
-            [release workflow]: ${{ github.event.repository.html_url }}/actions/workflows/release.yml
           token: ${{ secrets.GITHUB_TOKEN }}
