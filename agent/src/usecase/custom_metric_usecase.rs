@@ -19,7 +19,7 @@ impl CustomMetricUsecase<Studio> {
 }
 
 impl<R: CustomMetricStoreRepository> CustomMetricUsecase<R> {
-    pub async fn save(&self, request: CustomMetricStoreRequest) -> anyhow::Result<()> {
+    pub async fn save(&self, request: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()> {
         if let Err(e) = self.repository.save(request).await {
             log::error!("{:?}", e);
             Err(e)
@@ -42,7 +42,7 @@ mod tests {
     pub struct MockCustomMetricStoreRepository {}
 
     impl CustomMetricStoreRepository for MockCustomMetricStoreRepository {
-        async fn save(&self, _: CustomMetricStoreRequest) -> anyhow::Result<()> {
+        async fn save(&self, _: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()> {
             Ok(())
         }
     }
@@ -53,11 +53,11 @@ mod tests {
             repository: MockCustomMetricStoreRepository {},
         };
 
-        let request = CustomMetricStoreRequest {
+        let request = vec![CustomMetricStoreRequest {
             key: "test_key".to_string(),
             value: 10.52,
             occurred_at: chrono::Utc::now(),
-        };
+        }];
 
         if let Err(e) = usecase.save(request).await {
             panic!("{:?}", e);

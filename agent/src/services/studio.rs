@@ -470,7 +470,7 @@ impl EventStoreRepository for Studio {
 }
 
 impl CustomMetricStoreRepository for Studio {
-    async fn save(&self, request: CustomMetricStoreRequest) -> anyhow::Result<()> {
+    async fn save(&self, request: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()> {
         self.relay_to_studio("/v1/custom-metrics", request).await
     }
 }

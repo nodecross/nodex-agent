@@ -20,24 +20,29 @@ pub struct MessageContainer {
 
 pub async fn handler(
     _req: HttpRequest,
-    web::Json(json): web::Json<MessageContainer>,
+    web::Json(json): web::Json<Vec<MessageContainer>>,
 ) -> actix_web::Result<HttpResponse, AgentError> {
-    if json.key.is_empty() {
-        Err(AgentErrorCode::SendCustomMetricNoKey)?
-    }
+    let metrics = json
+        .iter()
+        .map(|m| {
+            if m.key.is_empty() {
+                return Err(AgentErrorCode::SendCustomMetricNoKey);
+            }
 
-    let occurred_at = milliseconds_to_time(json.occurred_at)
-        .ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
+            let occurred_at = milliseconds_to_time(m.occurred_at)
+                .ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
+
+            Ok(CustomMetricStoreRequest {
+                key: m.key.clone(),
+                value: m.value,
+                occurred_at,
+            })
+        })
+        .collect::<Result<Vec<CustomMetricStoreRequest>, AgentErrorCode>>()
+        .map_err(AgentError::new)?;
 
     let usecase = CustomMetricUsecase::new();
-    match usecase
-        .save(CustomMetricStoreRequest {
-            key: json.key,
-            value: json.value,
-            occurred_at,
-        })
-        .await
-    {
+    match usecase.save(metrics).await {
         Ok(_) => {
             log::info!("sent custom metrics");
             Ok(HttpResponse::NoContent().finish())

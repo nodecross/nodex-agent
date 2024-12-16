@@ -10,5 +10,5 @@ pub struct CustomMetricStoreRequest {
 
 #[trait_variant::make(Send)]
 pub trait CustomMetricStoreRepository {
-    async fn save(&self, request: CustomMetricStoreRequest) -> anyhow::Result<()>;
+    async fn save(&self, request: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()>;
 }

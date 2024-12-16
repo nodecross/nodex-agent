@@ -6,14 +6,17 @@ if is_windows():
 else:
     from sock import post
 
-json_response = post(
-    "/custom-metrics",
+metrics = [
     {
-        "key": "test-key",
-        "value": 10.52,
-        "occurred_at": int(time.time() * 1000),
-    },
-)
+        "key": "test-key" + str(x),
+        "value": 10.52 + x,
+        "occurred_at": int(time.time() * 1000 + x),
+    }
+    for x in range(10)
+]
+
+
+json_response = post("/custom-metrics", metrics)
 
 print("The response is as follows.\n")
 print(json_response)
