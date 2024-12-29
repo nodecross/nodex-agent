@@ -35,7 +35,7 @@ sysinfo = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tokio-util = "0.7.13"
-tower = { version = "0.4", features = ["util"] }
+tower = { version = "0.5", features = ["util"] }
 trait-variant = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
