@@ -2,7 +2,7 @@
 authors = { workspace = true }
 edition = { workspace = true }
 name = "protocol"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 chrono = { workspace = true }
@@ -23,6 +23,9 @@ thiserror = { workspace = true }
 trait-variant = { workspace = true }
 x25519-dalek = { workspace = true }
 zeroize = { workspace = true }
+coset = "0.3.8"
+ciborium = "0.2.2"
+ed25519-dalek = "2"
 
 [dev-dependencies]
 rand = "0.8.5"

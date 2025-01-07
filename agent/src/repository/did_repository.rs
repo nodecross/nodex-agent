@@ -1,7 +1,6 @@
 #[cfg(test)]
 pub mod mocks {
     use std::{collections::BTreeMap, convert::TryFrom};
-
     use protocol::{
         did::{
             did_repository::{CreateIdentifierError, DidRepository, FindIdentifierError},
@@ -55,14 +54,14 @@ pub mod mocks {
                                 id: "#signingKey".to_string(),
                                 controller: String::new(),
                                 r#type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-                                public_key_jwk: Jwk::try_from(keyring.sign.get_public_key())
+                                public_key_jwk: Jwk::try_from(&keyring.sign.get_public_key())
                                     .unwrap(),
                             },
                             DidPublicKey {
                                 id: "#encryptionKey".to_string(),
                                 controller: String::new(),
                                 r#type: "X25519KeyAgreementKey2019".to_string(),
-                                public_key_jwk: Jwk::from(keyring.encrypt.get_public_key()),
+                                public_key_jwk: Jwk::from(&keyring.encrypt.get_public_key()),
                             },
                         ]
                     })
