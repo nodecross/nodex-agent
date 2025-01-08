@@ -151,7 +151,7 @@ impl StudioClient {
         let mut headers = HeaderMap::new();
         headers.insert(
             reqwest::header::CONTENT_TYPE,
-            HeaderValue::from_static("binary/octet-stream"),
+            HeaderValue::from_static("application/octet-stream"),
         );
         self._post_common(path, body, headers).await
     }
