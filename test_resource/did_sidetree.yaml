@@ -103,6 +103,43 @@ components:
             type: string
           example: ["#signingKey", "#encryptionKey"]
 
+    PublicKeyCbor:
+      type: object
+      required:
+        - id
+        - type
+        - controller
+        - publicKeyCborJwk
+      properties:
+        id:
+          type: string
+          example: "#signingCborKey"
+        controller:
+          type: string
+          example: ""
+        type:
+          type: string
+          example: "Ed25519VerificationKey2018"
+        publicKeyJwk:
+          $ref: "#/components/schemas/PublicKeyCborJwk"
+
+    PublicKeyCborJwk:
+      type: object
+      required:
+        - kty
+        - crv
+        - x
+      properties:
+        kty:
+          type: string
+          example: "OKP"
+        crv:
+          type: string
+          example: "Ed25519"
+        x:
+          type: string
+          example: "0S51Ow0PkSHGQvdhOqpPutW2T4034rqltkfZXbgWg88"
+
     PublicKeyEnc:
       type: object
       required:
