@@ -187,7 +187,7 @@ impl KeyPair<ed25519_dalek::SigningKey, ed25519_dalek::VerifyingKey> for Ed25519
 #[derive(Clone)]
 pub struct KeyPairing {
     pub sign: K256KeyPair,
-    pub sign_cbor: Ed25519KeyPair,
+    pub sign_metrics: Ed25519KeyPair,
     pub update: K256KeyPair,
     pub recovery: K256KeyPair,
     pub encrypt: X25519KeyPair,
@@ -196,7 +196,7 @@ pub struct KeyPairing {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct KeyPairingHex {
     pub sign: KeyPairHex,
-    pub sign_cbor: KeyPairHex,
+    pub sign_metrics: KeyPairHex,
     pub update: KeyPairHex,
     pub recovery: KeyPairHex,
     pub encrypt: KeyPairHex,
@@ -205,13 +205,13 @@ pub struct KeyPairingHex {
 impl KeyPairing {
     pub fn create_keyring<T: RngCore + CryptoRng>(mut csprng: T) -> Self {
         let sign = K256KeyPair::new(k256::SecretKey::random(&mut csprng));
-        let sign_cbor = Ed25519KeyPair::new(&mut csprng);
+        let sign_metrics = Ed25519KeyPair::new(&mut csprng);
         let update = K256KeyPair::new(k256::SecretKey::random(&mut csprng));
         let recovery = K256KeyPair::new(k256::SecretKey::random(&mut csprng));
         let encrypt = X25519KeyPair::new(x25519_dalek::StaticSecret::random_from_rng(&mut csprng));
         KeyPairing {
             sign,
-            sign_cbor,
+            sign_metrics,
             update,
             recovery,
             encrypt,
@@ -223,7 +223,7 @@ impl From<&KeyPairing> for KeyPairingHex {
     fn from(keypair: &KeyPairing) -> Self {
         KeyPairingHex {
             sign: keypair.sign.to_hex_key_pair(),
-            sign_cbor: keypair.sign_cbor.to_hex_key_pair(),
+            sign_metrics: keypair.sign_metrics.to_hex_key_pair(),
             update: keypair.update.to_hex_key_pair(),
             recovery: keypair.recovery.to_hex_key_pair(),
             encrypt: keypair.encrypt.to_hex_key_pair(),
@@ -236,14 +236,14 @@ impl TryFrom<&KeyPairingHex> for KeyPairing {
 
     fn try_from(hex: &KeyPairingHex) -> Result<Self, Self::Error> {
         let sign = K256KeyPair::from_hex_key_pair(&hex.sign)?;
-        let sign_cbor = Ed25519KeyPair::from_hex_key_pair(&hex.sign_cbor)?;
+        let sign_metrics = Ed25519KeyPair::from_hex_key_pair(&hex.sign_metrics)?;
         let update = K256KeyPair::from_hex_key_pair(&hex.update)?;
         let recovery = K256KeyPair::from_hex_key_pair(&hex.recovery)?;
         let encrypt = X25519KeyPair::from_hex_key_pair(&hex.encrypt)?;
 
         Ok(KeyPairing {
             sign,
-            sign_cbor,
+            sign_metrics,
             update,
             recovery,
             encrypt,
@@ -262,7 +262,7 @@ pub mod tests {
         let keyring = KeyPairing::create_keyring(OsRng);
 
         assert_eq!(keyring.sign.get_secret_key().to_bytes().len(), 32);
-        assert_eq!(keyring.sign_cbor.get_secret_key().to_bytes().len(), 32);
+        assert_eq!(keyring.sign_metrics.get_secret_key().to_bytes().len(), 32);
         assert_eq!(keyring.update.get_secret_key().to_bytes().len(), 32);
         assert_eq!(keyring.recovery.get_secret_key().to_bytes().len(), 32);
         assert_eq!(keyring.encrypt.get_secret_key().as_bytes().len(), 32);

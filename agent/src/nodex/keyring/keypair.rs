@@ -8,7 +8,7 @@ use thiserror::Error;
 
 pub struct KeyPairingWithConfig<S: SecureKeyStore> {
     sign: K256KeyPair,
-    sign_cbor: Ed25519KeyPair,
+    sign_metrics: Ed25519KeyPair,
     update: K256KeyPair,
     recovery: K256KeyPair,
     encrypt: X25519KeyPair,
@@ -34,8 +34,8 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
         let sign = secure_keystore
             .read_sign()
             .ok_or(KeyPairingError::KeyNotFound)?;
-        let sign_cbor = secure_keystore
-            .read_sign_cbor()
+        let sign_metrics = secure_keystore
+            .read_sign_metrics()
             .ok_or(KeyPairingError::KeyNotFound)?;
         let update = secure_keystore
             .read_update()
@@ -49,7 +49,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
 
         Ok(KeyPairingWithConfig {
             sign,
-            sign_cbor,
+            sign_metrics,
             update,
             recovery,
             encrypt,
@@ -64,7 +64,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
 
         KeyPairingWithConfig {
             sign: keyring.sign,
-            sign_cbor: keyring.sign_cbor,
+            sign_metrics: keyring.sign_metrics,
             update: keyring.update,
             recovery: keyring.recovery,
             encrypt: keyring.encrypt,
@@ -76,7 +76,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
     pub fn get_keyring(&self) -> protocol::keyring::keypair::KeyPairing {
         protocol::keyring::keypair::KeyPairing {
             sign: self.sign.clone(),
-            sign_cbor: self.sign_cbor.clone(),
+            sign_metrics: self.sign_metrics.clone(),
             update: self.update.clone(),
             recovery: self.recovery.clone(),
             encrypt: self.encrypt.clone(),
@@ -86,7 +86,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
     pub fn save(self, did: &str) {
         let Self {
             sign,
-            sign_cbor,
+            sign_metrics,
             update,
             recovery,
             encrypt,
@@ -94,7 +94,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
             secure_keystore,
         } = self;
         secure_keystore.write(&SecureKeyStoreKey::Sign(sign));
-        secure_keystore.write(&SecureKeyStoreKey::SignCbor(Box::new(sign_cbor)));
+        secure_keystore.write(&SecureKeyStoreKey::SignMetrics(Box::new(sign_metrics)));
         secure_keystore.write(&SecureKeyStoreKey::Update(update));
         secure_keystore.write(&SecureKeyStoreKey::Recovery(recovery));
         secure_keystore.write(&SecureKeyStoreKey::Encrypt(encrypt));

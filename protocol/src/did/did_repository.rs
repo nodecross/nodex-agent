@@ -106,6 +106,15 @@ where
             "signingKey".to_string(),
             vec!["auth".to_string(), "general".to_string()],
         )?;
+        let sign_metrics = keyring
+            .sign_metrics
+            .get_public_key()
+            .to_public_key(
+                "Ed25519VerificationKey2018".to_string(),
+                "signingCborKey".to_string(),
+                vec!["auth".to_string(), "general".to_string()],
+            )
+            .unwrap();
         // vec!["keyAgreement".to_string()]
         let enc = keyring
             .encrypt
@@ -119,7 +128,7 @@ where
         let update = keyring.update.get_public_key();
         let recovery = keyring.recovery.get_public_key();
         let document = DidPatchDocument {
-            public_keys: vec![sign, enc],
+            public_keys: vec![sign, sign_metrics, enc],
             service_endpoints: vec![],
         };
         let payload = did_create_payload(document, update, recovery)?;

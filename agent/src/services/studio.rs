@@ -249,7 +249,7 @@ impl Studio {
         request: T,
     ) -> anyhow::Result<()> {
         let my_keyring = self.did_accessor.get_my_keyring();
-        let signing_key = &my_keyring.sign_cbor.get_secret_key();
+        let signing_key = &my_keyring.sign_metrics.get_secret_key();
         let payload = protocol::cbor::signature::sign_message(signing_key, &request)?;
         let res = self.http_client.post(path, payload).await?;
         let status = res.status();

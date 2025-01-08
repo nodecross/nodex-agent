@@ -4,7 +4,7 @@ use crate::config::SingletonAppConfig;
 
 pub enum SecureKeyStoreKey {
     Sign(K256KeyPair),
-    SignCbor(Box<Ed25519KeyPair>),
+    SignMetrics(Box<Ed25519KeyPair>),
     Update(K256KeyPair),
     Recovery(K256KeyPair),
     Encrypt(X25519KeyPair),
@@ -13,7 +13,7 @@ pub enum SecureKeyStoreKey {
 #[derive(Debug)]
 pub enum SecureKeyStoreType {
     Sign,
-    SignCbor,
+    SignMetrics,
     Update,
     Recovery,
     Encrypt,
@@ -22,7 +22,7 @@ pub enum SecureKeyStoreType {
 pub trait SecureKeyStore {
     fn write(&self, key_pair: &SecureKeyStoreKey);
     fn read_sign(&self) -> Option<K256KeyPair>;
-    fn read_sign_cbor(&self) -> Option<Ed25519KeyPair>;
+    fn read_sign_metrics(&self) -> Option<Ed25519KeyPair>;
     fn read_update(&self) -> Option<K256KeyPair>;
     fn read_recovery(&self) -> Option<K256KeyPair>;
     fn read_encrypt(&self) -> Option<X25519KeyPair>;
@@ -42,7 +42,7 @@ impl FileBaseKeyStore {
 fn k2t(k: &SecureKeyStoreKey) -> SecureKeyStoreType {
     match k {
         SecureKeyStoreKey::Sign(_) => SecureKeyStoreType::Sign,
-        SecureKeyStoreKey::SignCbor(_) => SecureKeyStoreType::SignCbor,
+        SecureKeyStoreKey::SignMetrics(_) => SecureKeyStoreType::SignMetrics,
         SecureKeyStoreKey::Update(_) => SecureKeyStoreType::Update,
         SecureKeyStoreKey::Recovery(_) => SecureKeyStoreType::Recovery,
         SecureKeyStoreKey::Encrypt(_) => SecureKeyStoreType::Encrypt,
@@ -57,17 +57,17 @@ impl SecureKeyStore for FileBaseKeyStore {
 
         match key_pair {
             SecureKeyStoreKey::Sign(k) => config.save_sign_key_pair(k),
-            SecureKeyStoreKey::SignCbor(k) => config.save_sign_cbor_key_pair(k),
+            SecureKeyStoreKey::SignMetrics(k) => config.save_sign_metrics_key_pair(k),
             SecureKeyStoreKey::Update(k) => config.save_update_key_pair(k),
             SecureKeyStoreKey::Recovery(k) => config.save_recovery_key_pair(k),
             SecureKeyStoreKey::Encrypt(k) => config.save_encrypt_key_pair(k),
         };
     }
 
-    fn read_sign_cbor(&self) -> Option<Ed25519KeyPair> {
-        log::debug!("Called: read_internal (type: sign_cbor)");
+    fn read_sign_metrics(&self) -> Option<Ed25519KeyPair> {
+        log::debug!("Called: read_internal (type: sign_metrics)");
         let config = self.config.lock();
-        config.load_sign_cbor_key_pair()
+        config.load_sign_metrics_key_pair()
     }
 
     fn read_sign(&self) -> Option<K256KeyPair> {

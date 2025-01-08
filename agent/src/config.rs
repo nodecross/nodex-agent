@@ -20,7 +20,7 @@ use crate::nodex::utils::UnwrapLog;
 #[derive(Clone, Deserialize, Serialize)]
 struct KeyPairsConfig {
     sign: Option<KeyPairHex>,
-    sign_cbor: Option<KeyPairHex>,
+    sign_metrics: Option<KeyPairHex>,
     update: Option<KeyPairHex>,
     recovery: Option<KeyPairHex>,
     encrypt: Option<KeyPairHex>,
@@ -73,7 +73,7 @@ impl Default for ConfigRoot {
             did: None,
             key_pairs: KeyPairsConfig {
                 sign: None,
-                sign_cbor: None,
+                sign_metrics: None,
                 update: None,
                 recovery: None,
                 encrypt: None,
@@ -182,12 +182,12 @@ impl AppConfig {
             .map_err(AppConfigError::WriteError)
     }
 
-    pub fn load_sign_cbor_key_pair(&self) -> Option<Ed25519KeyPair> {
-        load_key_pair(&self.root.key_pairs.sign_cbor)
+    pub fn load_sign_metrics_key_pair(&self) -> Option<Ed25519KeyPair> {
+        load_key_pair(&self.root.key_pairs.sign_metrics)
     }
 
-    pub fn save_sign_cbor_key_pair(&mut self, value: &Ed25519KeyPair) {
-        self.root.key_pairs.sign_cbor = Some(value.to_hex_key_pair());
+    pub fn save_sign_metrics_key_pair(&mut self, value: &Ed25519KeyPair) {
+        self.root.key_pairs.sign_metrics = Some(value.to_hex_key_pair());
         self.write().unwrap();
     }
 
@@ -197,13 +197,13 @@ impl AppConfig {
 
     pub fn load_keyring(&self) -> Option<KeyPairing> {
         let sign = self.load_sign_key_pair()?;
-        let sign_cbor = self.load_sign_cbor_key_pair()?;
+        let sign_metrics = self.load_sign_metrics_key_pair()?;
         let update = self.load_update_key_pair()?;
         let recovery = self.load_recovery_key_pair()?;
         let encrypt = self.load_encrypt_key_pair()?;
         Some(KeyPairing {
             sign,
-            sign_cbor,
+            sign_metrics,
             update,
             recovery,
             encrypt,
