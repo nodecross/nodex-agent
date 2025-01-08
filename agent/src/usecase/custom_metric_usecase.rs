@@ -1,7 +1,8 @@
 use crate::{
-    repository::custom_metric_repository::{CustomMetricStoreRepository, CustomMetricStoreRequest},
+    repository::custom_metric_repository::CustomMetricStoreRepository,
     services::studio::Studio,
 };
+use protocol::cbor::types::CustomMetric;
 
 pub struct CustomMetricUsecase<R>
 where
@@ -19,7 +20,7 @@ impl CustomMetricUsecase<Studio> {
 }
 
 impl<R: CustomMetricStoreRepository> CustomMetricUsecase<R> {
-    pub async fn save(&self, request: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()> {
+    pub async fn save(&self, request: Vec<CustomMetric>) -> anyhow::Result<()> {
         if let Err(e) = self.repository.save(request).await {
             log::error!("{:?}", e);
             Err(e)
@@ -38,11 +39,11 @@ mod tests {
         },
         usecase::custom_metric_usecase::CustomMetricUsecase,
     };
-
     pub struct MockCustomMetricStoreRepository {}
+    use protocol::cbor::types::CustomMetric;
 
     impl CustomMetricStoreRepository for MockCustomMetricStoreRepository {
-        async fn save(&self, _: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()> {
+        async fn save(&self, _: Vec<CustomMetric>) -> anyhow::Result<()> {
             Ok(())
         }
     }

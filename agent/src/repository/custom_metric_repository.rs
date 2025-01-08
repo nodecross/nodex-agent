@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use protocol::cbor::types::CustomMetric;
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone)]
@@ -10,5 +11,5 @@ pub struct CustomMetricStoreRequest {
 
 #[trait_variant::make(Send)]
 pub trait CustomMetricStoreRepository {
-    async fn save(&self, request: Vec<CustomMetricStoreRequest>) -> anyhow::Result<()>;
+    async fn save(&self, request: Vec<CustomMetric>) -> anyhow::Result<()>;
 }

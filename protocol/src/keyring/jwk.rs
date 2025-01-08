@@ -158,7 +158,6 @@ impl From<&ed25519_dalek::VerifyingKey> for Jwk {
     }
 }
 
-
 #[cfg(test)]
 pub mod tests {
     use rand_core::OsRng;

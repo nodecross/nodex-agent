@@ -1,6 +1,5 @@
 #[cfg(test)]
 pub mod mocks {
-    use std::{collections::BTreeMap, convert::TryFrom};
     use protocol::{
         did::{
             did_repository::{CreateIdentifierError, DidRepository, FindIdentifierError},
@@ -9,6 +8,7 @@ pub mod mocks {
         keyring::jwk::Jwk,
         keyring::keypair::{KeyPair, KeyPairing},
     };
+    use std::{collections::BTreeMap, convert::TryFrom};
 
     #[derive(Clone)]
     pub struct MockDidRepository {

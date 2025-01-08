@@ -212,7 +212,9 @@ pub mod mocks {
                                 id: "#signingKey".to_string(),
                                 controller: String::new(),
                                 r#type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-                                public_key_jwk: (&keyring.sign.get_public_key()).try_into().unwrap(),
+                                public_key_jwk: (&keyring.sign.get_public_key())
+                                    .try_into()
+                                    .unwrap(),
                             },
                             DidPublicKey {
                                 id: "#encryptionKey".to_string(),

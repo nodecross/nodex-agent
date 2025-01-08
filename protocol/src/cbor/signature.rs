@@ -19,10 +19,13 @@ pub trait WithToken {
     fn get_token(&self) -> &Token;
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum SignMessageError {
+    #[error(transparent)]
     Cbor(ciborium::ser::Error<std::io::Error>),
+    #[error(transparent)]
     Signature(SignatureError),
+    #[error("cose error")]
     Cose(CoseError),
 }
 
@@ -48,16 +51,25 @@ pub fn sign_message<M: Serialize>(
     Ok(sign1_data)
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum DecodeMessageError<F: std::error::Error> {
+    #[error(transparent)]
     Cbor(ciborium::de::Error<std::io::Error>),
+    #[error("cose error")]
     Cose(CoseError),
+    #[error("payload is empty")]
     PayloadEmpty,
+    #[error("public key is empty")]
     NotFoundPubkey,
+    #[error(transparent)]
     GetDidDocument(F),
+    #[error(transparent)]
     GetPubkey(JwkToEd25519Error),
+    #[error("expired message")]
     Expired,
+    #[error("incompatible array size: {0}")]
     VecToArray(usize),
+    #[error(transparent)]
     Signature(SignatureError),
 }
 
