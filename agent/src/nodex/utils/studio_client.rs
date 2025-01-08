@@ -147,6 +147,23 @@ impl StudioClient {
         self._post(path, body.into()).await
     }
 
+    async fn _post_binary(&self, path: &str, body: Body) -> anyhow::Result<reqwest::Response> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            reqwest::header::CONTENT_TYPE,
+            HeaderValue::from_static("binary/octet-stream"),
+        );
+        self._post_common(path, body, headers).await
+    }
+
+    pub async fn post_binary(
+        &self,
+        path: &str,
+        body: impl Into<Body>,
+    ) -> anyhow::Result<reqwest::Response> {
+        self._post_binary(path, body.into()).await
+    }
+
     pub async fn send_device_info(
         &self,
         path: &str,

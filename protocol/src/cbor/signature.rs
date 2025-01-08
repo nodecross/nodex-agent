@@ -11,9 +11,9 @@ use validator::Validate;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Token {
-    did: String,
+    pub did: String,
     #[serde(with = "ts_seconds")]
-    exp: DateTime<Utc>,
+    pub exp: DateTime<Utc>,
 }
 
 impl Token {
@@ -25,26 +25,10 @@ impl Token {
     }
 }
 
-pub trait WithToken {
-    fn get_token(&self) -> &Token;
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Validate, Debug)]
-pub struct WithTokenImpl<T>
-where
-    T: PartialEq + std::fmt::Debug
-{
+#[derive(Serialize, Deserialize, Validate, Debug)]
+pub struct WithToken<T> {
     pub token: Token,
     pub inner: T,
-}
-
-impl<T> WithToken for WithTokenImpl<T>
-where
-    T: PartialEq + std::fmt::Debug
-{
-    fn get_token(&self) -> &Token {
-        &self.token
-    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -57,9 +41,9 @@ pub enum SignMessageError {
     Cose(CoseError),
 }
 
-pub fn sign_message<M: Serialize + WithToken>(
+pub fn sign_message<M: Serialize>(
     signing_key: &SigningKey,
-    message: &M,
+    message: &WithToken<M>,
 ) -> Result<Vec<u8>, SignMessageError> {
     let mut c = Cursor::new(Vec::new());
     ciborium::into_writer(message, &mut c).map_err(SignMessageError::Cbor)?;
@@ -105,20 +89,20 @@ pub async fn verify_message<M, R>(
     did_repository: &R,
     key_type: &str,
     data: &[u8],
-) -> Result<M, DecodeMessageError<R::FindIdentifierError>>
+) -> Result<WithToken<M>, DecodeMessageError<R::FindIdentifierError>>
 where
     R: DidRepository,
-    M: DeserializeOwned + WithToken,
+    M: DeserializeOwned,
 {
     let sign1 = coset::CoseSign1::from_slice(data).map_err(DecodeMessageError::Cose)?;
     let payload = sign1
         .payload
         .as_ref()
         .ok_or(DecodeMessageError::PayloadEmpty)?;
-    let message: M =
+    let message: WithToken<M> =
         ciborium::from_reader(Cursor::new(payload)).map_err(DecodeMessageError::Cbor)?;
     let document = did_repository
-        .find_identifier(&message.get_token().did)
+        .find_identifier(&message.token.did)
         .await
         .map_err(DecodeMessageError::GetDidDocument)?
         .ok_or(DecodeMessageError::NotFoundPubkey)?
@@ -127,7 +111,7 @@ where
         .get_key(key_type)
         .ok_or(DecodeMessageError::NotFoundPubkey)?;
     let pubkey: VerifyingKey = pubkey.try_into().map_err(DecodeMessageError::GetPubkey)?;
-    if message.get_token().exp < Utc::now() {
+    if message.token.exp < Utc::now() {
         return Err(DecodeMessageError::Expired);
     }
     sign1.verify_signature(b"", |sig, data| {

@@ -243,7 +243,7 @@ impl Studio {
     }
 
     #[inline]
-    async fn relay_to_studio_via_cbor<T: serde::Serialize + std::fmt::Debug + PartialEq>(
+    async fn relay_to_studio_via_cbor<T: serde::Serialize + std::fmt::Debug>(
         &self,
         path: &str,
         request: T,
@@ -252,9 +252,12 @@ impl Studio {
         let my_keyring = self.did_accessor.get_my_keyring();
         let signing_key = &my_keyring.sign_metrics.get_secret_key();
         let token = protocol::cbor::signature::Token::new(my_did);
-        let request = protocol::cbor::signature::WithTokenImpl { inner: request, token };
+        let request = protocol::cbor::signature::WithToken {
+            inner: request,
+            token,
+        };
         let payload = protocol::cbor::signature::sign_message(signing_key, &request)?;
-        let res = self.http_client.post(path, payload).await?;
+        let res = self.http_client.post_binary(path, payload).await?;
         let status = res.status();
         let json: Value = res.json().await.context("Failed to read response body")?;
         let message = json
