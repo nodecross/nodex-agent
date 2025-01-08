@@ -243,13 +243,16 @@ impl Studio {
     }
 
     #[inline]
-    async fn relay_to_studio_via_cbor<T: serde::Serialize>(
+    async fn relay_to_studio_via_cbor<T: serde::Serialize + std::fmt::Debug + PartialEq>(
         &self,
         path: &str,
         request: T,
     ) -> anyhow::Result<()> {
+        let my_did = self.did_accessor.get_my_did();
         let my_keyring = self.did_accessor.get_my_keyring();
         let signing_key = &my_keyring.sign_metrics.get_secret_key();
+        let token = protocol::cbor::signature::Token::new(my_did);
+        let request = protocol::cbor::signature::WithTokenImpl { inner: request, token };
         let payload = protocol::cbor::signature::sign_message(signing_key, &request)?;
         let res = self.http_client.post(path, payload).await?;
         let status = res.status();

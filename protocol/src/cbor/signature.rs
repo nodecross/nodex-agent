@@ -7,6 +7,7 @@ use ed25519_dalek::{Signature, SignatureError, Signer, SigningKey, Verifier, Ver
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
+use validator::Validate;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Token {
@@ -15,8 +16,35 @@ pub struct Token {
     exp: DateTime<Utc>,
 }
 
+impl Token {
+    pub fn new(did: impl Into<String>) -> Self {
+        Self {
+            did: did.into(),
+            exp: Utc::now() + std::time::Duration::from_secs(3600),
+        }
+    }
+}
+
 pub trait WithToken {
     fn get_token(&self) -> &Token;
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Validate, Debug)]
+pub struct WithTokenImpl<T>
+where
+    T: PartialEq + std::fmt::Debug
+{
+    pub token: Token,
+    pub inner: T,
+}
+
+impl<T> WithToken for WithTokenImpl<T>
+where
+    T: PartialEq + std::fmt::Debug
+{
+    fn get_token(&self) -> &Token {
+        &self.token
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -29,7 +57,7 @@ pub enum SignMessageError {
     Cose(CoseError),
 }
 
-pub fn sign_message<M: Serialize>(
+pub fn sign_message<M: Serialize + WithToken>(
     signing_key: &SigningKey,
     message: &M,
 ) -> Result<Vec<u8>, SignMessageError> {
