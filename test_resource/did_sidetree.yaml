@@ -139,7 +139,7 @@ components:
           example: "Ed25519"
         x:
           type: string
-          example: "0S51Ow0PkSHGQvdhOqpPutW2T4034rqltkfZXbgWg88"
+          example: "ZNFgzZaoa0Ho-GuxH1k5rQSJoynM1SXAO5i2bbEQ64M"
 
     PublicKeyEnc:
       type: object
