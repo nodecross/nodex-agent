@@ -4,7 +4,7 @@ use crate::config::SingletonAppConfig;
 
 pub enum SecureKeyStoreKey {
     Sign(K256KeyPair),
-    SignCbor(Ed25519KeyPair),
+    SignCbor(Box<Ed25519KeyPair>),
     Update(K256KeyPair),
     Recovery(K256KeyPair),
     Encrypt(X25519KeyPair),
@@ -51,7 +51,7 @@ fn k2t(k: &SecureKeyStoreKey) -> SecureKeyStoreType {
 
 impl SecureKeyStore for FileBaseKeyStore {
     fn write(&self, key_pair: &SecureKeyStoreKey) {
-        log::info!("Called: write_internal (type: {:?})", k2t(&key_pair));
+        log::info!("Called: write_internal (type: {:?})", k2t(key_pair));
 
         let mut config = self.config.lock();
 

@@ -86,7 +86,6 @@ where
     let payload = sign1
         .payload
         .as_ref()
-        .take()
         .ok_or(DecodeMessageError::PayloadEmpty)?;
     let message: M =
         ciborium::from_reader(Cursor::new(payload)).map_err(DecodeMessageError::Cbor)?;

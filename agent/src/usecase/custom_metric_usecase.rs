@@ -1,6 +1,5 @@
 use crate::{
-    repository::custom_metric_repository::CustomMetricStoreRepository,
-    services::studio::Studio,
+    repository::custom_metric_repository::CustomMetricStoreRepository, services::studio::Studio,
 };
 use protocol::cbor::types::CustomMetric;
 
@@ -33,14 +32,10 @@ impl<R: CustomMetricStoreRepository> CustomMetricUsecase<R> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        repository::custom_metric_repository::{
-            CustomMetricStoreRepository, CustomMetricStoreRequest,
-        },
-        usecase::custom_metric_usecase::CustomMetricUsecase,
-    };
+    use super::CustomMetricStoreRepository;
+    use crate::usecase::custom_metric_usecase::CustomMetricUsecase;
     pub struct MockCustomMetricStoreRepository {}
-    use protocol::cbor::types::CustomMetric;
+    use protocol::cbor::types::{CustomMetric, TimeValue};
 
     impl CustomMetricStoreRepository for MockCustomMetricStoreRepository {
         async fn save(&self, _: Vec<CustomMetric>) -> anyhow::Result<()> {
@@ -54,10 +49,9 @@ mod tests {
             repository: MockCustomMetricStoreRepository {},
         };
 
-        let request = vec![CustomMetricStoreRequest {
+        let request = vec![CustomMetric {
             key: "test_key".to_string(),
-            value: 10.52,
-            occurred_at: chrono::Utc::now(),
+            values: vec![TimeValue(chrono::Utc::now(), 10.52)],
         }];
 
         if let Err(e) = usecase.save(request).await {

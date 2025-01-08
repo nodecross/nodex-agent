@@ -94,7 +94,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
             secure_keystore,
         } = self;
         secure_keystore.write(&SecureKeyStoreKey::Sign(sign));
-        secure_keystore.write(&SecureKeyStoreKey::SignCbor(sign_cbor));
+        secure_keystore.write(&SecureKeyStoreKey::SignCbor(Box::new(sign_cbor)));
         secure_keystore.write(&SecureKeyStoreKey::Update(update));
         secure_keystore.write(&SecureKeyStoreKey::Recovery(recovery));
         secure_keystore.write(&SecureKeyStoreKey::Encrypt(encrypt));

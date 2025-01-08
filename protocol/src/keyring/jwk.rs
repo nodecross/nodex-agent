@@ -62,7 +62,7 @@ impl TryFrom<&Jwk> for k256::PublicKey {
         }
         if let Some(y) = value.y.as_ref() {
             let x = decode_base64url(&value.x)?;
-            let y = decode_base64url(&y)?;
+            let y = decode_base64url(y)?;
             let pk = k256::EncodedPoint::from_affine_coordinates(&x, &y, false);
             let pk = k256::PublicKey::from_sec1_bytes(pk.as_bytes())?;
             Ok(pk)

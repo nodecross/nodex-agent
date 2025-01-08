@@ -1,7 +1,6 @@
 use super::utils::milliseconds_to_time;
 use crate::{
-    controllers::errors::AgentErrorCode,
-    usecase::custom_metric_usecase::CustomMetricUsecase,
+    controllers::errors::AgentErrorCode, usecase::custom_metric_usecase::CustomMetricUsecase,
 };
 use axum::extract::Json;
 use axum::http::StatusCode;
@@ -21,7 +20,7 @@ pub struct MessageContainer {
 pub async fn handler(
     Json(json): Json<Vec<MessageContainer>>,
 ) -> Result<StatusCode, AgentErrorCode> {
-    let metrics: Vec<CustomMetric> = json
+    let metrics: Vec<_> = json
         .into_iter()
         .try_fold(
             HashMap::new(),
@@ -43,7 +42,7 @@ pub async fn handler(
             },
         )?
         .into_iter()
-        .map(|(typ, values)| CustomMetric { typ, values })
+        .map(|(key, values)| CustomMetric { key, values })
         .collect();
 
     let usecase = CustomMetricUsecase::new();

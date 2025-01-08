@@ -64,7 +64,7 @@ impl DidDocument {
     pub fn get_key(&self, key_type: &str) -> Option<&Jwk> {
         self.public_key
             .as_ref()
-            .and_then(|pks| pks.into_iter().find(|pk| pk.id == key_type))
+            .and_then(|pks| pks.iter().find(|pk| pk.id == key_type))
             .map(|public_key| &public_key.public_key_jwk)
     }
 }
