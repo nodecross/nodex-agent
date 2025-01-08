@@ -96,12 +96,13 @@ components:
           type: array
           items:
             - $ref: "#/components/schemas/PublicKey"
+            - $ref: "#/components/schemas/PublicKeyCbor"
             - $ref: "#/components/schemas/PublicKeyEnc"
         authentication:
           type: array
           items:
             type: string
-          example: ["#signingKey", "#encryptionKey"]
+          example: ["#signingKey", "#signingCborKey", "#encryptionKey"]
 
     PublicKeyCbor:
       type: object
