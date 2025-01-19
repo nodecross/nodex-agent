@@ -32,7 +32,7 @@ hex = "0.4.3"
 hmac = "0.12.1"
 http = "1.2.0"
 k256 = { version = "0.13.3", features = ["ecdh", "ecdsa", "serde", "sha256"] }
-log = "0.4.21"
+log = "0.4.25"
 mac_address = "1.1.5"
 protocol = { path = "./protocol" }
 rand_core = "0.6.4"
