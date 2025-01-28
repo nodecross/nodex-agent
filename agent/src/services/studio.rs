@@ -464,7 +464,7 @@ impl MetricStoreRepository for Studio {
 }
 
 impl EventStoreRepository for Studio {
-    async fn save(&self, request: EventStoreRequest) -> anyhow::Result<()> {
+    async fn save(&self, request: Vec<EventStoreRequest>) -> anyhow::Result<()> {
         self.relay_to_studio("/v1/events", request).await
     }
 }

@@ -19,7 +19,7 @@ impl EventUsecase<Studio> {
 }
 
 impl<R: EventStoreRepository> EventUsecase<R> {
-    pub async fn save(&self, request: EventStoreRequest) -> anyhow::Result<()> {
+    pub async fn save(&self, request: Vec<EventStoreRequest>) -> anyhow::Result<()> {
         match self.repository.save(request).await {
             Ok(_) => {
                 log::info!("save event");
@@ -43,7 +43,7 @@ mod tests {
     pub struct MockEventStoreRepository {}
 
     impl EventStoreRepository for MockEventStoreRepository {
-        async fn save(&self, _: EventStoreRequest) -> anyhow::Result<()> {
+        async fn save(&self, _: Vec<EventStoreRequest>) -> anyhow::Result<()> {
             Ok(())
         }
     }
@@ -54,11 +54,11 @@ mod tests {
             repository: MockEventStoreRepository {},
         };
         let _ = usecase
-            .save(EventStoreRequest {
+            .save(vec![EventStoreRequest {
                 key: "test".to_string(),
                 detail: "test".to_string(),
                 occurred_at: chrono::Utc::now(),
-            })
+            }])
             .await
             .map_err(|e| panic!("{:?}", e));
     }

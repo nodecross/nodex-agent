@@ -17,26 +17,32 @@ pub struct MessageContainer {
     occurred_at: u64,
 }
 
-pub async fn handler(Json(json): Json<MessageContainer>) -> Result<StatusCode, AgentErrorCode> {
-    if json.key.is_empty() {
-        Err(AgentErrorCode::SendEventNoKey)?
-    }
-    if json.detail.is_empty() {
-        Err(AgentErrorCode::SendEventNoDetail)?
-    }
+pub async fn handler(
+    Json(json): Json<Vec<MessageContainer>>,
+) -> Result<StatusCode, AgentErrorCode> {
+    let events = json
+        .iter()
+        .map(|m| {
+            if m.key.is_empty() {
+                return Err(AgentErrorCode::SendEventNoKey);
+            }
+            if m.detail.is_empty() {
+                return Err(AgentErrorCode::SendEventNoDetail);
+            }
 
-    let occurred_at =
-        milliseconds_to_time(json.occurred_at).ok_or(AgentErrorCode::SendEventInvalidOccurredAt)?;
+            let occurred_at = milliseconds_to_time(m.occurred_at)
+                .ok_or(AgentErrorCode::SendEventInvalidOccurredAt)?;
+
+            Ok(EventStoreRequest {
+                key: m.key.clone(),
+                detail: m.detail.clone(),
+                occurred_at,
+            })
+        })
+        .collect::<Result<Vec<EventStoreRequest>, AgentErrorCode>>()?;
 
     let usecase = EventUsecase::new();
-    match usecase
-        .save(EventStoreRequest {
-            key: json.key,
-            detail: json.detail,
-            occurred_at,
-        })
-        .await
-    {
+    match usecase.save(events).await {
         Ok(_) => {
             log::info!("save event");
             Ok(StatusCode::NO_CONTENT)

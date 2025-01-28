@@ -10,5 +10,5 @@ pub struct EventStoreRequest {
 
 #[trait_variant::make(Send)]
 pub trait EventStoreRepository {
-    async fn save(&self, request: EventStoreRequest) -> anyhow::Result<()>;
+    async fn save(&self, request: Vec<EventStoreRequest>) -> anyhow::Result<()>;
 }
