@@ -1,17 +1,12 @@
-use std::convert::TryInto;
-
-use http::StatusCode;
-
 use super::sidetree::{
     client::SidetreeHttpClient,
     payload::{
         did_create_payload, DidDocument, DidPatchDocument, DidResolutionResponse, ToPublicKey,
     },
 };
-use crate::keyring::{
-    jwk::Jwk,
-    keypair::{KeyPair, KeyPairing},
-};
+use crate::keyring::keypair::{KeyPair, KeyPairing};
+use http::StatusCode;
+use std::convert::TryInto;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CreateIdentifierError<StudioClientError: std::error::Error> {
@@ -47,25 +42,21 @@ pub enum GetPublicKeyError {
     JwkToX25519(#[from] crate::keyring::jwk::JwkToX25519Error),
 }
 
-fn get_key(key_type: &str, did_document: &DidDocument) -> Result<Jwk, GetPublicKeyError> {
+pub fn get_sign_key(did_document: &DidDocument) -> Result<k256::PublicKey, GetPublicKeyError> {
     let did = &did_document.id;
     let public_key = did_document
-        .public_key
-        .clone()
-        .and_then(|pks| pks.into_iter().find(|pk| pk.id == key_type))
-        .ok_or(GetPublicKeyError::PublicKeyNotFound(did.to_string()))?;
-    Ok(public_key.public_key_jwk)
-}
-
-pub fn get_sign_key(did_document: &DidDocument) -> Result<k256::PublicKey, GetPublicKeyError> {
-    let public_key = get_key("#signingKey", did_document)?;
+        .get_key("#signingKey")
+        .ok_or_else(|| GetPublicKeyError::PublicKeyNotFound(did.to_string()))?;
     Ok(public_key.try_into()?)
 }
 
 pub fn get_encrypt_key(
     did_document: &DidDocument,
 ) -> Result<x25519_dalek::PublicKey, GetPublicKeyError> {
-    let public_key = get_key("#encryptionKey", did_document)?;
+    let did = &did_document.id;
+    let public_key = did_document
+        .get_key("#encryptionKey")
+        .ok_or_else(|| GetPublicKeyError::PublicKeyNotFound(did.to_string()))?;
     Ok(public_key.try_into()?)
 }
 
@@ -115,6 +106,15 @@ where
             "signingKey".to_string(),
             vec!["auth".to_string(), "general".to_string()],
         )?;
+        let sign_metrics = keyring
+            .sign_metrics
+            .get_public_key()
+            .to_public_key(
+                "Ed25519VerificationKey2018".to_string(),
+                "signingCborKey".to_string(),
+                vec!["auth".to_string(), "general".to_string()],
+            )
+            .unwrap();
         // vec!["keyAgreement".to_string()]
         let enc = keyring
             .encrypt
@@ -128,7 +128,7 @@ where
         let update = keyring.update.get_public_key();
         let recovery = keyring.recovery.get_public_key();
         let document = DidPatchDocument {
-            public_keys: vec![sign, enc],
+            public_keys: vec![sign, sign_metrics, enc],
             service_endpoints: vec![],
         };
         let payload = did_create_payload(document, update, recovery)?;
@@ -221,13 +221,15 @@ pub mod mocks {
                                 id: "#signingKey".to_string(),
                                 controller: String::new(),
                                 r#type: "EcdsaSecp256k1VerificationKey2019".to_string(),
-                                public_key_jwk: keyring.sign.get_public_key().try_into().unwrap(),
+                                public_key_jwk: (&keyring.sign.get_public_key())
+                                    .try_into()
+                                    .unwrap(),
                             },
                             DidPublicKey {
                                 id: "#encryptionKey".to_string(),
                                 controller: String::new(),
                                 r#type: "X25519KeyAgreementKey2019".to_string(),
-                                public_key_jwk: keyring.encrypt.get_public_key().into(),
+                                public_key_jwk: (&keyring.encrypt.get_public_key()).into(),
                             },
                         ]
                     })

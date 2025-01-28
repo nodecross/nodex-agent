@@ -1,3 +1,4 @@
+pub mod cbor;
 pub mod did;
 pub mod didcomm;
 pub mod keyring;

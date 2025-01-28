@@ -50,7 +50,7 @@ impl NodeX {
             }
         }
 
-        let mut keyring_with_config =
+        let keyring_with_config =
             keyring::keypair::KeyPairingWithConfig::create_keyring(config, keystore);
         let res = self
             .did_repository

@@ -2,15 +2,18 @@
 authors = { workspace = true }
 edition = { workspace = true }
 name = "protocol"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 chrono = { workspace = true }
+ciborium = "0.2.2"
+coset = "0.3.8"
 cuid = { workspace = true }
 data-encoding = { workspace = true }
 didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.1", default-features = false, features = [
     "raw-crypto",
 ] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
 hex = { workspace = true }
 http = { workspace = true }
 k256 = { workspace = true }
@@ -21,6 +24,7 @@ serde_json = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }
 trait-variant = { workspace = true }
+validator = { version = "0.18", features = ["derive"] }
 x25519-dalek = { workspace = true }
 zeroize = { workspace = true }
 

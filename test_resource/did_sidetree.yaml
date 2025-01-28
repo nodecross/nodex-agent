@@ -96,12 +96,50 @@ components:
           type: array
           items:
             - $ref: "#/components/schemas/PublicKey"
+            - $ref: "#/components/schemas/PublicKeyCbor"
             - $ref: "#/components/schemas/PublicKeyEnc"
         authentication:
           type: array
           items:
             type: string
-          example: ["#signingKey", "#encryptionKey"]
+          example: ["#signingKey", "#signingCborKey", "#encryptionKey"]
+
+    PublicKeyCbor:
+      type: object
+      required:
+        - id
+        - type
+        - controller
+        - publicKeyCborJwk
+      properties:
+        id:
+          type: string
+          example: "#signingCborKey"
+        controller:
+          type: string
+          example: ""
+        type:
+          type: string
+          example: "Ed25519VerificationKey2018"
+        publicKeyJwk:
+          $ref: "#/components/schemas/PublicKeyCborJwk"
+
+    PublicKeyCborJwk:
+      type: object
+      required:
+        - kty
+        - crv
+        - x
+      properties:
+        kty:
+          type: string
+          example: "OKP"
+        crv:
+          type: string
+          example: "Ed25519"
+        x:
+          type: string
+          example: "ZNFgzZaoa0Ho-GuxH1k5rQSJoynM1SXAO5i2bbEQ64M"
 
     PublicKeyEnc:
       type: object

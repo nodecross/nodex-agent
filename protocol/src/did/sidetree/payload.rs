@@ -60,6 +60,15 @@ pub struct DidDocument {
     pub authentication: Option<Vec<String>>,
 }
 
+impl DidDocument {
+    pub fn get_key(&self, key_type: &str) -> Option<&Jwk> {
+        self.public_key
+            .as_ref()
+            .and_then(|pks| pks.iter().find(|pk| pk.id == key_type))
+            .map(|public_key| &public_key.public_key_jwk)
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PublicKeyPayload {
     #[serde(rename = "id")]
@@ -216,8 +225,8 @@ pub fn did_create_payload(
     update_key: k256::PublicKey,
     recovery_key: k256::PublicKey,
 ) -> Result<String, DidCreatePayloadError> {
-    let update_commitment = commitment_scheme(&update_key.try_into()?)?;
-    let recovery_commitment = commitment_scheme(&recovery_key.try_into()?)?;
+    let update_commitment = commitment_scheme(&(&update_key).try_into()?)?;
+    let recovery_commitment = commitment_scheme(&(&recovery_key).try_into()?)?;
     let patch = DidAction::Replace {
         document: replace_payload,
     };
@@ -306,8 +315,8 @@ pub fn did_update_payload(
     old_update_secret: &k256::SecretKey,
     new_update: k256::PublicKey,
 ) -> Result<String, DidUpdatePayloadError> {
-    let old_update: Jwk = old_update.try_into()?;
-    let new_update = commitment_scheme(&new_update.try_into()?)?;
+    let old_update: Jwk = (&old_update).try_into()?;
+    let new_update = commitment_scheme(&(&new_update).try_into()?)?;
     let delta = DidDeltaObject {
         patches: update_payload,
         update_commitment: new_update,

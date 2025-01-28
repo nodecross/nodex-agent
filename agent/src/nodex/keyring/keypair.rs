@@ -2,13 +2,13 @@ use crate::{
     config::SingletonAppConfig,
     nodex::extension::secure_keystore::{SecureKeyStore, SecureKeyStoreKey},
 };
-use protocol::keyring::keypair::{K256KeyPair, X25519KeyPair};
+use protocol::keyring::keypair::{Ed25519KeyPair, K256KeyPair, X25519KeyPair};
 use protocol::rand_core::OsRng;
-
 use thiserror::Error;
 
 pub struct KeyPairingWithConfig<S: SecureKeyStore> {
     sign: K256KeyPair,
+    sign_metrics: Ed25519KeyPair,
     update: K256KeyPair,
     recovery: K256KeyPair,
     encrypt: X25519KeyPair,
@@ -23,7 +23,7 @@ pub enum KeyPairingError {
     #[error("key not found")]
     KeyNotFound,
     #[error("DID not found")]
-    DIDNotFound,
+    DidNotFound,
 }
 
 impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
@@ -33,6 +33,9 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
     ) -> Result<Self, KeyPairingError> {
         let sign = secure_keystore
             .read_sign()
+            .ok_or(KeyPairingError::KeyNotFound)?;
+        let sign_metrics = secure_keystore
+            .read_sign_metrics()
             .ok_or(KeyPairingError::KeyNotFound)?;
         let update = secure_keystore
             .read_update()
@@ -46,6 +49,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
 
         Ok(KeyPairingWithConfig {
             sign,
+            sign_metrics,
             update,
             recovery,
             encrypt,
@@ -60,6 +64,7 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
 
         KeyPairingWithConfig {
             sign: keyring.sign,
+            sign_metrics: keyring.sign_metrics,
             update: keyring.update,
             recovery: keyring.recovery,
             encrypt: keyring.encrypt,
@@ -71,23 +76,30 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
     pub fn get_keyring(&self) -> protocol::keyring::keypair::KeyPairing {
         protocol::keyring::keypair::KeyPairing {
             sign: self.sign.clone(),
+            sign_metrics: self.sign_metrics.clone(),
             update: self.update.clone(),
             recovery: self.recovery.clone(),
             encrypt: self.encrypt.clone(),
         }
     }
 
-    pub fn save(&mut self, did: &str) {
-        self.secure_keystore
-            .write(&SecureKeyStoreKey::Sign(&self.sign));
-        self.secure_keystore
-            .write(&SecureKeyStoreKey::Update(&self.update));
-        self.secure_keystore
-            .write(&SecureKeyStoreKey::Recovery(&self.recovery));
-        self.secure_keystore
-            .write(&SecureKeyStoreKey::Encrypt(&self.encrypt));
+    pub fn save(self, did: &str) {
+        let Self {
+            sign,
+            sign_metrics,
+            update,
+            recovery,
+            encrypt,
+            config,
+            secure_keystore,
+        } = self;
+        secure_keystore.write(&SecureKeyStoreKey::Sign(sign));
+        secure_keystore.write(&SecureKeyStoreKey::SignMetrics(Box::new(sign_metrics)));
+        secure_keystore.write(&SecureKeyStoreKey::Update(update));
+        secure_keystore.write(&SecureKeyStoreKey::Recovery(recovery));
+        secure_keystore.write(&SecureKeyStoreKey::Encrypt(encrypt));
         {
-            let mut config = self.config.lock();
+            let mut config = config.lock();
             config.save_did(did);
             config.save_is_initialized(true);
         }
@@ -97,6 +109,6 @@ impl<S: SecureKeyStore> KeyPairingWithConfig<S> {
         self.config
             .lock()
             .get_did()
-            .ok_or(KeyPairingError::DIDNotFound)
+            .ok_or(KeyPairingError::DidNotFound)
     }
 }

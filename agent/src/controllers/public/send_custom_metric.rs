@@ -1,12 +1,12 @@
 use super::utils::milliseconds_to_time;
 use crate::{
-    controllers::errors::AgentErrorCode,
-    repository::custom_metric_repository::CustomMetricStoreRequest,
-    usecase::custom_metric_usecase::CustomMetricUsecase,
+    controllers::errors::AgentErrorCode, usecase::custom_metric_usecase::CustomMetricUsecase,
 };
 use axum::extract::Json;
 use axum::http::StatusCode;
+use protocol::cbor::types::{CustomMetric, TimeValue};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize)]
 pub struct MessageContainer {
@@ -20,23 +20,30 @@ pub struct MessageContainer {
 pub async fn handler(
     Json(json): Json<Vec<MessageContainer>>,
 ) -> Result<StatusCode, AgentErrorCode> {
-    let metrics = json
-        .iter()
-        .map(|m| {
-            if m.key.is_empty() {
-                return Err(AgentErrorCode::SendCustomMetricNoKey);
-            }
-
-            let occurred_at = milliseconds_to_time(m.occurred_at)
-                .ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
-
-            Ok(CustomMetricStoreRequest {
-                key: m.key.clone(),
-                value: m.value,
-                occurred_at,
-            })
-        })
-        .collect::<Result<Vec<CustomMetricStoreRequest>, AgentErrorCode>>()?;
+    let metrics: Vec<_> = json
+        .into_iter()
+        .try_fold(
+            HashMap::new(),
+            |mut acc: HashMap<String, Vec<TimeValue>>,
+             MessageContainer {
+                 key,
+                 value,
+                 occurred_at,
+             }| {
+                if key.is_empty() {
+                    return Err(AgentErrorCode::SendCustomMetricNoKey);
+                }
+                let occurred_at = milliseconds_to_time(occurred_at)
+                    .ok_or(AgentErrorCode::SendCustomMetricInvalidOccurredAt)?;
+                acc.entry(key)
+                    .or_default()
+                    .push(TimeValue(occurred_at, value));
+                Ok(acc)
+            },
+        )?
+        .into_iter()
+        .map(|(key, values)| CustomMetric { key, values })
+        .collect();
 
     let usecase = CustomMetricUsecase::new();
     match usecase.save(metrics).await {
