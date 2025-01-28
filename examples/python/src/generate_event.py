@@ -6,13 +6,18 @@ if is_windows():
 else:
     from sock import post
 
+events = [
+    {
+        "key": "test-key" + str(x + 10),
+        "detail": "test-detail" + str(x),
+        "occurred_at": int(time.time() * 1000 + x),
+    }
+    for x in range(10)
+]
+
 json_response = post(
     "/events",
-    {
-        "key": "test-key",
-        "detail": "test-detail",
-        "occurred_at": int(time.time() * 1000),
-    },
+    events,
 )
 
 print("The response is as follows.\n")
