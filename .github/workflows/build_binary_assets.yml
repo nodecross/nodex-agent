@@ -1,0 +1,95 @@
+name: Build binary assets
+
+on:
+  workflow_call:
+    # Map the workflow outputs to job outputs
+    outputs:
+      upload_deb_name:
+        description: "deb package name"
+        value: ${{ jobs.build_linux.outputs.upload_deb_name }}
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [aarch64-apple-darwin]
+    name: Build / MacOS / ${{ matrix.target }}
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) build
+        uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          use-cache: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_deb_name: ${{ steps.output_deb.outputs.upload_deb_name }}
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu]
+    name: Build / Linux / ${{ matrix.target }}
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) build
+        uses: ./.github/actions/build-with-cross
+        with:
+          target: ${{ matrix.target }}
+          use-cache: true
+          binary-file-name: nodex-agent
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install `cargo-get`
+        run: cargo install cargo-get
+        shell: bash
+
+      - name: (run) Output package name for release
+        run: |
+          PACKAGE_NAME="nodex-agent"
+          VERSION=$(cargo get workspace.package.version)
+          ARCHITECTURE=$(dpkg --print-architecture)
+          UPLOAD_DEB_NAME="${PACKAGE_NAME}_${VERSION}_${ARCHITECTURE}.deb"
+          echo "UPLOAD_DEB_NAME=$UPLOAD_DEB_NAME" >> $GITHUB_ENV
+        shell: bash
+
+      - name: (run) build with omnibus
+        uses: ./.github/actions/build-with-omnibus
+        with:
+          use-cache: true
+          platform: ubuntu
+          arch: ${{ matrix.target }}
+          release-package-name: ${{ env.UPLOAD_DEB_NAME }}
+          package-format: deb
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: (run) Output deb name for release
+        id: output_deb
+        run: echo "upload_deb_name=${{ env.UPLOAD_DEB_NAME }}" >> $GITHUB_OUTPUT
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    name: Build / Windows / ${{ matrix.target }}
+    steps:
+      - name: (checkout) source code
+        uses: actions/checkout@v4
+
+      - name: (run) build
+        uses: ./.github/actions/build-with-cross
+        with:
+          target: ${{ matrix.target }}
+          use-cache: false
+          binary-file-name: nodex-agent.exe
+          github-token: ${{ secrets.GITHUB_TOKEN }}
