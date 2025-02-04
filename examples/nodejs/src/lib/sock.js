@@ -1,6 +1,7 @@
 import * as os from "os";
 import * as path from "path";
 import got from "got";
+import fs from "fs";
 
 const default_path = path.join(os.homedir(), ".nodex/run/nodex.sock");
 const path_by_installed_deb = "/home/nodex/.nodex/run/nodex.sock";
