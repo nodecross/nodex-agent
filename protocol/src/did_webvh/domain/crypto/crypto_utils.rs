@@ -1,12 +1,17 @@
 use bs58;
+use ed25519_dalek::*;
+use multibase::Base;
 use multihash::Multihash;
 use sha2::{Digest, Sha256};
 
 const SHA256: u64 = 0x12;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum CryptoError {
+    #[error("Failed to generate hash")]
     FailedToGenerateHash,
+    #[error("Failed to sign data")]
+    FailedToSignData,
 }
 
 pub fn generate_multihash_with_base58_encode(data: &[u8]) -> Result<String, CryptoError> {
@@ -29,6 +34,23 @@ pub fn validate_hash(hash: &str) -> bool {
             false
         }
     }
+}
+
+pub fn sign_data(data: &[u8], key: &[u8]) -> Result<String, CryptoError> {
+    let sign_key =
+        SigningKey::from_bytes(key.try_into().map_err(|_| CryptoError::FailedToSignData)?);
+    let signature = sign_key.sign(data);
+    let proof_value = multibase_encode(&signature.to_bytes());
+    Ok(proof_value)
+}
+
+pub fn multibase_encode(data: &[u8]) -> String {
+    multibase::encode(Base::Base58Btc, data)
+}
+
+pub fn multibase_decode(data: &str) -> Result<Vec<u8>, multibase::Error> {
+    let (_, decoded) = multibase::decode(data)?;
+    Ok(decoded)
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use super::crypto::hash::validate_hash;
+use super::crypto::crypto_utils::validate_hash;
 use const_format::formatcp;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
@@ -12,6 +12,8 @@ static METHOD_PAT: &str = formatcp!(r"{METHOD_CHAR}+");
 static SPECIFIC_ID_PAT: &str = formatcp!(r"({IDCHAR}*:)*{IDCHAR}+");
 static DID_PAT: &str =
     formatcp!(r"^did:(?<method_name>{METHOD_PAT}):(?<method_specific_id>{SPECIFIC_ID_PAT})$");
+
+pub static DIDWEBVH_PLACEHOLDER: &str = "{SCID}";
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum DidError {
@@ -159,7 +161,7 @@ impl DidWebvh {
             return Err(DidWebvhError::InvalidSCID);
         }
 
-        if !validate_hash(scid) {
+        if scid != DIDWEBVH_PLACEHOLDER && !validate_hash(scid) {
             return Err(DidWebvhError::InvalidSCID);
         }
 

@@ -6,19 +6,19 @@ use k256::elliptic_curve::sec1::ToEncodedPoint;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Jwk {
     #[serde(rename = "kty")]
-    kty: String,
+    pub kty: String,
 
     #[serde(rename = "crv")]
-    crv: String,
+    pub crv: String,
 
     #[serde(rename = "x")]
-    x: String,
+    pub x: String,
 
     #[serde(rename = "y", skip_serializing_if = "Option::is_none")]
-    y: Option<String>,
+    pub y: Option<String>,
 }
 
 #[derive(Error, Debug)]
