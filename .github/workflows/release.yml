@@ -7,23 +7,9 @@ permissions:
   contents: write
 
 jobs:
-  check-user:
-    name: Check Team affiliation and Branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check Team affiliation and Branch
-        uses: ./.github/actions/check-team-affiliation-and-branch
-        with:
-          ref: ${{ github.ref }}
-          actor: ${{ github.actor }}
-          github_token: ${{ secrets.PAT }}
-
   build-macos:
-    needs: check-user
     runs-on: macos-latest
+    environment: production
     strategy:
       matrix:
         target: [aarch64-apple-darwin]
