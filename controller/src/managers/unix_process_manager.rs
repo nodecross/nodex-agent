@@ -23,7 +23,7 @@ impl ProcessManager for UnixProcessManager {
         }
     }
     fn spawn_process(&self, cmd: impl AsRef<Path>, args: &[&str]) -> Result<u32, std::io::Error> {
-        let cmd = CString::new(cmd.as_ref().to_string_lossy().as_ref()).map_err(nule_to_ioe)?;
+        let cmd = CString::new(cmd.as_ref().to_string_lossy().into_owned()).map_err(nule_to_ioe)?;
         let args: Result<Vec<_>, _> = args
             .iter()
             .map(|arg| CString::new(*arg).map_err(nule_to_ioe))

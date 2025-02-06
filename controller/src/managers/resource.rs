@@ -1,5 +1,7 @@
 use crate::config::get_config;
+use crate::validator::sigstore::{BundleVerifier, Verifier, TrustRootDownloader, VerifyError};
 use bytes::Bytes;
+use dirs::download_dir;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use glob::glob;
 use std::{
@@ -12,6 +14,7 @@ use tar::{Archive, Builder, Header};
 #[cfg(unix)]
 use users::{get_current_gid, get_current_uid};
 use zip::{result::ZipError, ZipArchive};
+
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResourceError {
@@ -27,6 +30,8 @@ pub enum ResourceError {
     RemoveFailed(String),
     #[error("Rollback failed: {0}")]
     RollbackFailed(String),
+    #[error("Failed to verify: {0}")]
+    VerifyError(VerifyError),
 }
 
 // ref: https://stackoverflow.com/questions/26958489/how-to-copy-a-folder-recursively-in-rust
@@ -151,6 +156,23 @@ pub trait ResourceManagerTrait: Send + Sync {
         }
 
         Ok(())
+    }
+
+    async fn verify(&self, downloaded_path: &Path) -> Result<(), ResourceError> {
+        async move {
+            BundleVerifier::new(TrustRootDownloader)
+                .verify(
+                    self.tmp_path(),
+                    downloaded_path.join("nodex-agent.bundle"),
+                    downloaded_path.join("nodex-agent"),
+                    "https://github.com/nodecross/nodex/blob/main/.github/workflows/release.yml@refs/heads/main",
+                    "https://token.actions.githubusercontent.com"
+                )
+                .await
+                .map_err(ResourceError::VerifyError)?;
+
+            Ok(())
+        }
     }
 
     fn remove_directory(&self, path: &Path) -> Result<(), io::Error> {
