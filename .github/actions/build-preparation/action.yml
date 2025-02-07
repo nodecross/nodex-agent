@@ -1,0 +1,33 @@
+name: build preparation
+inputs:
+  target:
+    required: true
+    description: ""
+  use-cache:
+    required: true
+    description: ""
+runs:
+  using: composite
+  steps:
+    - name: (setup) rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        cache: ${{ inputs.use-cache }}
+        cache-key: ${{ inputs.target }}
+        rustflags: "" # override default rustflags
+
+    - name: add toolchain
+      shell: bash
+      run: rustup target add ${{ inputs.target }}
+
+    - name: (setup) sccache
+      uses: mozilla-actions/sccache-action@v0.0.7
+
+    - name: (setup) environment variables for sccache
+      shell: bash
+      run: |
+        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+    - name: (setup) mold
+      uses: rui314/setup-mold@v1

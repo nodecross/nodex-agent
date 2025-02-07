@@ -20,23 +20,15 @@ runs:
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
 
-    - name: (cache) rust
-      if: ${{ inputs.use-cache == 'true' }}
-      uses: Swatinem/rust-cache@v2
-
-    - name: add toolchain
-      shell: bash
-      run: rustup target add ${{ inputs.target }}
+    - name: (setup) rust
+      uses: ./.github/actions/build-preparation
+      with:
+        target: ${{ matrix.target }}
+        use-cache: true
 
     - name: (run) build
       shell: bash
       run: cargo build --release --target ${{ inputs.target }}
-
-    - name: (run) create artifact
-      uses: vimtor/action-zip@v1.1
-      with:
-        files: target/${{ inputs.target }}/release/nodex-agent
-        dest: nodex-agent-${{ inputs.target }}.zip
 
     - name: (run) create artifact for Windows
       if: contains(inputs.target, 'windows')
