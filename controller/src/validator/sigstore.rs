@@ -3,14 +3,11 @@ use sigstore::{
     bundle::verify::{policy, VerificationPolicy},
     cosign::{
         bundle::SignedArtifactBundle,
-        {client::Client, CosignCapabilities}
+        {client::Client, CosignCapabilities},
     },
     crypto::{CosignVerificationKey, SigningScheme},
     errors::SigstoreError,
-    trust::{
-        TrustRoot,
-        sigstore::SigstoreTrustRoot
-    }
+    trust::{sigstore::SigstoreTrustRoot, TrustRoot},
 };
 use std::path::{Path, PathBuf};
 use x509_cert;

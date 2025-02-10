@@ -1,5 +1,5 @@
 use crate::config::get_config;
-use crate::validator::sigstore::{BundleVerifier, Verifier, TrustRootDownloader, VerifyError};
+use crate::validator::sigstore::{BundleVerifier, TrustRootDownloader, Verifier, VerifyError};
 use bytes::Bytes;
 use dirs::download_dir;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
@@ -14,7 +14,6 @@ use tar::{Archive, Builder, Header};
 #[cfg(unix)]
 use users::{get_current_gid, get_current_uid};
 use zip::{result::ZipError, ZipArchive};
-
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResourceError {

@@ -105,6 +105,11 @@ impl NodeX {
                 .await
                 .map_err(|e| anyhow::anyhow!(e))?;
 
+            resource_manager.verify(output_path).await.map_err(|e| {
+                log::error!("Failed to verify: {}", e);
+                anyhow::anyhow!(e)
+            })?;
+
             runtime_manager.launch_controller(agent_path)?;
             runtime_manager.update_state(State::Update)?;
         }
