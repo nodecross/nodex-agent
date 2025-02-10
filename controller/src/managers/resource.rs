@@ -1,7 +1,6 @@
 use crate::config::get_config;
 use crate::validator::sigstore::{BundleVerifier, TrustRootDownloader, Verifier, VerifyError};
 use bytes::Bytes;
-use dirs::download_dir;
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
 use glob::glob;
 use std::{
