@@ -118,7 +118,7 @@ impl<R: TrustRootRepository + Sync + Send> Verifier for BundleVerifier<R> {
             .verify(&certificate_chain[0])
             .expect("Failed to verify");
 
-        Client::verify_blob(&bundle.cert, &bundle.base64_signature.trim(), &blob)
+        Client::verify_blob(&bundle.cert, bundle.base64_signature.trim(), &blob)
             .map_err(VerifyError::VerifyFailed)
     }
 
