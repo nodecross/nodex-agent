@@ -1,5 +1,4 @@
 use super::runtime::{RuntimeError, RuntimeInfo, RuntimeInfoStorage, State};
-use fs2::FileExt;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
 use std::path::PathBuf;
@@ -34,8 +33,7 @@ impl RuntimeInfoStorage for FileHandler {
     where
         F: FnOnce(&mut RuntimeInfo) -> Result<(), RuntimeError>,
     {
-        self.file
-            .lock_exclusive()
+        fs2::FileExt::lock_exclusive(&self.file)
             .map_err(self.handle_err(RuntimeError::FileLock))?;
 
         let mut runtime_info = self.read().map_err(self.handle_err_id())?;
@@ -44,7 +42,7 @@ impl RuntimeInfoStorage for FileHandler {
 
         self.write_locked(&runtime_info)
             .map_err(self.handle_err_id())?;
-        self.file.unlock().map_err(RuntimeError::FileUnlock)?;
+        fs2::FileExt::unlock(&self.file).map_err(RuntimeError::FileUnlock)?;
 
         Ok(())
     }
@@ -71,7 +69,7 @@ impl FileHandler {
         error: impl Fn(E) -> RuntimeError + 'a,
     ) -> impl Fn(E) -> RuntimeError + 'a {
         move |e| {
-            let res = self.file.unlock().map_err(RuntimeError::FileUnlock);
+            let res = fs2::FileExt::unlock(&self.file).map_err(RuntimeError::FileUnlock);
             if let Err(res) = res {
                 return res;
             }
