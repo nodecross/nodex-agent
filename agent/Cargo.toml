@@ -39,7 +39,7 @@ tower = { version = "0.5", features = ["util"] }
 trait-variant = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
-validator = { version = "0.19", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 zip = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
