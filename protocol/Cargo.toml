@@ -13,9 +13,11 @@ data-encoding = { workspace = true }
 didcomm-rs = { git = "https://github.com/nodecross/didcomm-rs.git", tag = "v0.8.1", default-features = false, features = [
     "raw-crypto",
 ] }
+ed25519-dalek = { workspace = true }
 hex = { workspace = true }
 http = { workspace = true }
 k256 = { workspace = true }
+multibase = { workspace = true }
 multihash = { workspace = true }
 rand_core = { workspace = true }
 regex = { workspace = true }
@@ -26,6 +28,7 @@ serde_json_canonicalizer = { workspace = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true }
 trait-variant = { workspace = true }
+uuid = { workspace = true }
 validator = { workspace = true }
 validator_derive = { workspace = true }
 x25519-dalek = { workspace = true }

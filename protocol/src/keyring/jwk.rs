@@ -2,23 +2,24 @@ use std::convert::{From, Into, TryFrom, TryInto};
 
 pub use data_encoding;
 use data_encoding::{DecodeError, DecodePartial, BASE64URL_NOPAD};
+use ed25519_dalek::*;
 use k256::elliptic_curve::sec1::ToEncodedPoint;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Jwk {
     #[serde(rename = "kty")]
-    kty: String,
+    pub kty: String,
 
     #[serde(rename = "crv")]
-    crv: String,
+    pub crv: String,
 
     #[serde(rename = "x")]
-    x: String,
+    pub x: String,
 
     #[serde(rename = "y", skip_serializing_if = "Option::is_none")]
-    y: Option<String>,
+    pub y: Option<String>,
 }
 
 #[derive(Error, Debug)]
@@ -111,6 +112,71 @@ impl From<x25519_dalek::PublicKey> for Jwk {
         let x = BASE64URL_NOPAD.encode(value.as_bytes());
         let kty = "OKP".to_string();
         let crv = "X25519".to_string();
+        Jwk {
+            kty,
+            crv,
+            x,
+            y: None,
+        }
+    }
+}
+#[derive(Error, Debug)]
+pub enum JwkToEd25519Error {
+    #[error("decode error: {0:?}")]
+    Decode(#[from] Option<DecodeError>),
+    #[error("different crv")]
+    DifferentCrv,
+    #[error("crypt error: {0}")]
+    Crypt(#[from] ed25519_dalek::SignatureError),
+}
+
+impl TryFrom<Jwk> for ed25519_dalek::VerifyingKey {
+    type Error = JwkToEd25519Error;
+    fn try_from(value: Jwk) -> Result<Self, Self::Error> {
+        if value.crv != "Ed25519" {
+            return Err(JwkToEd25519Error::DifferentCrv);
+        }
+        let pk = BASE64URL_NOPAD
+            .decode(value.x.as_bytes())
+            .map_err(|e| JwkToEd25519Error::Decode(Some(e)))?;
+        let pk: [u8; 32] = pk.try_into().map_err(|_| JwkToEd25519Error::Decode(None))?;
+        VerifyingKey::from_bytes(&pk).map_err(JwkToEd25519Error::Crypt)
+    }
+}
+
+impl From<ed25519_dalek::VerifyingKey> for Jwk {
+    fn from(value: ed25519_dalek::VerifyingKey) -> Self {
+        let x = BASE64URL_NOPAD.encode(value.to_bytes().as_ref());
+        let kty = "OKP".to_string();
+        let crv = "Ed25519".to_string();
+        Jwk {
+            kty,
+            crv,
+            x,
+            y: None,
+        }
+    }
+}
+
+impl TryFrom<Jwk> for ed25519_dalek::SigningKey {
+    type Error = JwkToEd25519Error;
+    fn try_from(value: Jwk) -> Result<Self, Self::Error> {
+        if value.crv != "Ed25519" {
+            return Err(JwkToEd25519Error::DifferentCrv);
+        }
+        let sk = BASE64URL_NOPAD
+            .decode(value.x.as_bytes())
+            .map_err(|e| JwkToEd25519Error::Decode(Some(e)))?;
+        let sk: [u8; 32] = sk.try_into().map_err(|_| JwkToEd25519Error::Decode(None))?;
+        Ok(SigningKey::from_bytes(&sk))
+    }
+}
+
+impl From<ed25519_dalek::SigningKey> for Jwk {
+    fn from(value: ed25519_dalek::SigningKey) -> Self {
+        let x = BASE64URL_NOPAD.encode(value.to_bytes().as_ref());
+        let kty = "OKP".to_string();
+        let crv = "Ed25519".to_string();
         Jwk {
             kty,
             crv,

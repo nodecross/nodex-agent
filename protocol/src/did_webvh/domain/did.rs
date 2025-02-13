@@ -1,7 +1,8 @@
-use super::crypto::hash::validate_hash;
+use super::crypto::crypto_utils::validate_hash;
 use const_format::formatcp;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::convert::TryFrom;
+use std::ops::Deref;
 use std::str::FromStr;
 
 // ref: https://www.w3.org/TR/did-core/#did-syntax
@@ -12,6 +13,8 @@ static METHOD_PAT: &str = formatcp!(r"{METHOD_CHAR}+");
 static SPECIFIC_ID_PAT: &str = formatcp!(r"({IDCHAR}*:)*{IDCHAR}+");
 static DID_PAT: &str =
     formatcp!(r"^did:(?<method_name>{METHOD_PAT}):(?<method_specific_id>{SPECIFIC_ID_PAT})$");
+
+pub static DIDWEBVH_PLACEHOLDER: &str = "{SCID}";
 
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum DidError {
@@ -128,6 +131,14 @@ impl Serialize for Did {
     }
 }
 
+impl Deref for Did {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.inner
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, thiserror::Error)]
 pub enum DidWebvhError {
     #[error(transparent)]
@@ -159,7 +170,7 @@ impl DidWebvh {
             return Err(DidWebvhError::InvalidSCID);
         }
 
-        if !validate_hash(scid) {
+        if scid != DIDWEBVH_PLACEHOLDER && !validate_hash(scid) {
             return Err(DidWebvhError::InvalidSCID);
         }
 
@@ -249,6 +260,14 @@ impl<'de> Deserialize<'de> for DidWebvh {
         let s = String::deserialize(deserializer)?;
         s.parse()
             .map_err(|_| serde::de::Error::custom("Invalid Did Format"))
+    }
+}
+
+impl Deref for DidWebvh {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        &self.did.inner
     }
 }
 
