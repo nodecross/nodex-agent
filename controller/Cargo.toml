@@ -40,11 +40,12 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = "0.9.34"
 shadow-rs = { workspace = true }
-sigstore = "0.10.0"
+sigstore = "0.11.0"
 tar = "0.4.43"
 thiserror = { workspace = true }
 tokio = { workspace = true }
 trait-variant = { workspace = true }
+walkdir = "2.5.0"
 x509-cert = "0.2.5"
 zip = { workspace = true }
 
