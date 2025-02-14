@@ -8,17 +8,10 @@ use axum::{
 
 #[cfg(unix)]
 pub mod unix {
-    use axum::http::Request;
     use axum::Router;
     use controller::unix_utils::{
         convention_of_meta_uds_path, recv_fd, remove_file_if_exists, send_fd,
     };
-    use hyper::body::Incoming;
-    use hyper_util::{
-        rt::{TokioExecutor, TokioIo},
-        server,
-    };
-    use std::convert::Infallible;
     use std::os::unix::fs::PermissionsExt;
     use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
     use std::path::Path;
@@ -26,14 +19,6 @@ pub mod unix {
     use tokio::signal::unix::{signal, SignalKind};
     use tokio::task::JoinSet;
     use tokio_util::sync::CancellationToken;
-    use tower::Service;
-
-    fn unwrap_infallible<T>(result: Result<T, Infallible>) -> T {
-        match result {
-            Ok(value) => value,
-            Err(err) => match err {},
-        }
-    }
 
     pub fn recieve_listener(uds_path: impl AsRef<Path>) -> std::io::Result<UnixListener> {
         let meta_uds_path = convention_of_meta_uds_path(&uds_path)?;
@@ -60,24 +45,8 @@ pub mod unix {
 
     pub async fn make_uds_server(router: Router, uds: UnixListener) -> std::io::Result<()> {
         // https://github.com/tokio-rs/axum/blob/main/examples/unix-domain-socket/src/main.rs
-        let mut app = router.into_make_service();
-        loop {
-            let (socket, _remote_addr) = uds.accept().await?;
-            let tower_service = unwrap_infallible(app.call(&socket).await);
-            tokio::spawn(async move {
-                let socket = TokioIo::new(socket);
-                let hyper_service =
-                    hyper::service::service_fn(move |request: Request<Incoming>| {
-                        tower_service.clone().call(request)
-                    });
-                if let Err(err) = server::conn::auto::Builder::new(TokioExecutor::new())
-                    .serve_connection_with_upgrades(socket, hyper_service)
-                    .await
-                {
-                    log::error!("failed to serve connection: {}", err);
-                }
-            });
-        }
+        let app = router.into_make_service();
+        axum::serve(uds, app).await
     }
 
     pub fn wrap_with_signal_handler(
@@ -224,7 +193,7 @@ pub fn make_router() -> Router {
             post(controllers::public::nodex_create_identifier::handler),
         )
         .route(
-            "/identifiers/:did",
+            "/identifiers/{did}",
             get(controllers::public::nodex_find_identifier::handler),
         )
         .route(

@@ -7,12 +7,40 @@ inputs:
   github-token:
     required: true
     description: ""
+  use-cache:
+    required: true
+    description: ""
 runs:
   using: composite
   steps:
     - name: (checkout) source code
       if: ${{ inputs.checkout == 'true' }}
       uses: actions/checkout@v4
+
+    - name: (setup) rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        cache: ${{ inputs.use-cache }}
+        cache-key: ${{ inputs.target }}
+        rustflags: "" # override default rustflags
+
+    - name: (setup) sccache
+      uses: mozilla-actions/sccache-action@v0.0.7
+
+    - name: (setup) environment variables for sccache
+      shell: bash
+      run: |
+        echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
+        echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+    - name: (setup) mold
+      uses: rui314/setup-mold@v1
+
+    - name: (configure) mold
+      shell: bash
+      run: |
+        mkdir -p ./.cargo
+        echo -e "[target.x86_64-unknown-linux-gnu]\nrustflags = [\"-C\", \"link-arg=-fuse-ld=mold\"]"
 
     - name: (check) lint-rs
       shell: bash

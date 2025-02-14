@@ -18,24 +18,10 @@ permissions:
   pull-requests: write
 
 jobs:
-  check-user:
-    name: Check Team affiliation and Branch
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check Team affiliation and Branch
-        uses: ./.github/actions/check-team-affiliation-and-branch
-        with:
-          ref: ${{ github.ref }}
-          actor: ${{ github.actor }}
-          github_token: ${{ secrets.PAT }}
-
   bump-version:
     name: Bump Version
-    needs: check-user
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
