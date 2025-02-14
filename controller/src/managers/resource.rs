@@ -13,6 +13,7 @@ use tar::{Archive, Builder, Header};
 #[cfg(unix)]
 use users::{get_current_gid, get_current_uid};
 use zip::{result::ZipError, ZipArchive};
+use walkdir::WalkDir;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ResourceError {
@@ -30,6 +31,10 @@ pub enum ResourceError {
     RollbackFailed(String),
     #[error("Failed to verify: {0}")]
     VerifyError(VerifyError),
+    #[error("File not found: {0}")]
+    FileNotFound(String),
+    #[error["Failed to Move: {0}"]]
+    MoveFailed(String),
 }
 
 // ref: https://stackoverflow.com/questions/26958489/how-to-copy-a-folder-recursively-in-rust
@@ -90,6 +95,17 @@ pub trait ResourceManagerTrait: Send + Sync {
                 .map_err(|_| ResourceError::DownloadFailed(binary_url.to_string()))?;
 
             self.extract_zip(content, download_path)?;
+
+            let nodex_agent_path = self.find_file(&download_path, "nodex-agent")
+            .ok_or_else(|| ResourceError::FileNotFound("nodex-agent".to_string()))?;
+            let nodex_agent_bundle_path = self.find_file(&download_path, "nodex-agent.bundle")
+            .ok_or_else(|| ResourceError::FileNotFound("nodex-agent.bundle".to_string()))?;
+    
+            fs::rename(&nodex_agent_path, download_path.join("nodex-agent"))
+                .map_err(|e| ResourceError::MoveFailed(e.to_string()))?;
+            fs::rename(&nodex_agent_bundle_path, download_path.join("nodex-agent.bundle"))
+                .map_err(|e| ResourceError::MoveFailed(e.to_string()))?;
+
             Ok(())
         }
     }
@@ -97,6 +113,17 @@ pub trait ResourceManagerTrait: Send + Sync {
     fn get_paths_to_backup(&self) -> Result<Vec<PathBuf>, ResourceError> {
         let config = get_config().lock().unwrap();
         Ok(vec![self.agent_path().clone(), config.config_dir.clone()])
+    }
+
+    fn find_file(&self, dir: &PathBuf, target: &str) -> Option<PathBuf> {
+        for entry in WalkDir::new(dir) {
+            if let Ok(entry) = entry {
+                if entry.file_name() == target {
+                    return Some(entry.into_path());
+                }
+            }
+        }
+        None
     }
 
     fn collect_downloaded_bundles(&self) -> Vec<PathBuf> {
@@ -168,6 +195,8 @@ pub trait ResourceManagerTrait: Send + Sync {
                 )
                 .await
                 .map_err(ResourceError::VerifyError)?;
+
+            log::info!("Verified successfully");
 
             Ok(())
         }
